@@ -19,8 +19,10 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--job-name', help='Write this greeting to a product file', required = True)
-    parser.add_argument('--min-coherence', default=0.01, type=float, help='Write this greeting to a product file', required = False)
+    parser.add_argument('--job-name', help='Write this greeting to a product file', required=True)
+    parser.add_argument(
+        '--min-coherence', default=0.01, type=float, help='Write this greeting to a product file', required=False
+    )
 
     args = parser.parse_args()
 
@@ -39,10 +41,7 @@ def main() -> None:
             UserWarning,
         )
 
-    product_file = process_mintpy(
-        job_name=args.job_name,
-        min_coherence=args.min_coherence
-    )
+    product_file = process_mintpy(job_name=args.job_name, min_coherence=args.min_coherence)
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)

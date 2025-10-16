@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 def download_pairs(job_name: str, folder: str | None = None) -> None:
     """Downloads HyP3 products and renames files to meet MintPy standards.
-    
+
     Args:
         job_name: Name of the HyP3 project.
         folder: Folder name that will contain the downloaded products. If None it will create a folder with the project name.
@@ -44,32 +44,32 @@ def download_pairs(job_name: str, folder: str | None = None) -> None:
         z.unlink()
 
     os.chdir(folder)
-    folders=list(Path('./').glob('*'))
-    folders=[fol for fol in folders if Path(fol).is_dir()]
+    folders = list(Path('./').glob('*'))
+    folders = [fol for fol in folders if Path(fol).is_dir()]
 
     for fol in folders:
         os.chdir(str(fol))
-        fs=list(Path('./').glob('*'))
-        txts=[t for t in fs if '.txt' in str(t) and 'README' not in str(t)]
-        ar=txts[0].open()
-        lines=ar.readlines()
+        fs = list(Path('./').glob('*'))
+        txts = [t for t in fs if '.txt' in str(t) and 'README' not in str(t)]
+        ar = txts[0].open()
+        lines = ar.readlines()
         ar.close()
-        burst=lines[0].split('_')[1]+'_'+lines[0].split('_')[2]
+        burst = lines[0].split('_')[1] + '_' + lines[0].split('_')[2]
         for f in fs:
-            name=f.name
-            newname='S1_'+burst+'_'+'_'.join([n for n in name.split('_')[10::]])
+            name = f.name
+            newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[10::]])
             if '.txt' in newname and 'README' not in newname:
-                foldername=newname.split('.')[0]
-            subprocess.call('mv '+name+' '+newname,shell=True)
+                foldername = newname.split('.')[0]
+            subprocess.call('mv ' + name + ' ' + newname, shell=True)
         os.chdir(cwd)
         os.chdir(folder)
-        subprocess.call('mv '+fol.name+' '+foldername,shell=True)
+        subprocess.call('mv ' + fol.name + ' ' + foldername, shell=True)
     os.chdir(cwd)
 
 
 def set_same_frame(folder: str, wgs84: bool = False) -> None:
     """Checks the coordinate system for all the files in the folder and reprojects them if necessary.
-    
+
     Args:
         folder: Path to the folder that has the HyP3 products.
         wgs84: If True reprojects all the files to WGS84 system.
@@ -83,16 +83,16 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
     corr = sorted(list(data_path.glob('*/*_corr*.tif')))
     conn_comp = sorted(list(data_path.glob('*/*_conncomp*.tif')))
     tiff_path = dem + lv_phi + lv_theta + water_mask + unw + corr + conn_comp
-    
+
     gdf = gpd.GeoDataFrame(
         {
-        'tiff_path': tiff_path,
-        'EPSG': [util.get_epsg(p) for p in tiff_path],
-        'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
+            'tiff_path': tiff_path,
+            'EPSG': [util.get_epsg(p) for p in tiff_path],
+            'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
         }
     )
 
-    # check for multiple projections and project to the predominant EPSG 
+    # check for multiple projections and project to the predominant EPSG
     if gdf['EPSG'].nunique() > 1:
         proj_count = gdf['EPSG'].value_counts()
         predominant_epsg = proj_count.idxmax()
@@ -101,26 +101,28 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
             pth = row['tiff_path']
             no_data_val = util.get_no_data_val(pth)
             res = util.get_res(pth)
-        
-            temp = pth.parent/f"temp_{pth.stem}.tif"
+
+            temp = pth.parent / f'temp_{pth.stem}.tif'
             pth.rename(temp)
             src_epsg = row['EPSG']
 
             warp_options = {
-                "dstSRS":f"EPSG:{predominant_epsg}", "srcSRS":f"EPSG:{src_epsg}",
-                "targetAlignedPixels":True,
-                "xRes":res, "yRes":res,
-                "dstNodata": no_data_val
+                'dstSRS': f'EPSG:{predominant_epsg}',
+                'srcSRS': f'EPSG:{src_epsg}',
+                'targetAlignedPixels': True,
+                'xRes': res,
+                'yRes': res,
+                'dstNodata': no_data_val,
             }
             gdal.Warp(str(pth), str(temp), **warp_options)
             temp.unlink()
 
         gdf = gpd.GeoDataFrame(
-        {
-        'tiff_path': tiff_path,
-        'EPSG': [util.get_epsg(p) for p in tiff_path],
-        'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
-        }
+            {
+                'tiff_path': tiff_path,
+                'EPSG': [util.get_epsg(p) for p in tiff_path],
+                'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
+            }
         )
     common_extents = osl.get_common_coverage_extents(unw)
     xmin, ymin, xmax, ymax = transform_bounds(int(osl.get_projection(str(unw[0]))), 3857, *common_extents)
@@ -128,8 +130,10 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
     correct_wkt_input = False
     while not correct_wkt_input:
         epsg = int(gdf.iloc[0]['EPSG'])
-        wkt = (f'POLYGON(({common_extents[0]} {common_extents[1]}, {common_extents[2]} {common_extents[1]}, {common_extents[2]} '
-               f'{common_extents[3]}, {common_extents[0]} {common_extents[3]}, {common_extents[0]} {common_extents[1]}))')
+        wkt = (
+            f'POLYGON(({common_extents[0]} {common_extents[1]}, {common_extents[2]} {common_extents[1]}, {common_extents[2]} '
+            f'{common_extents[3]}, {common_extents[0]} {common_extents[3]}, {common_extents[0]} {common_extents[1]}))'
+        )
         print(wkt)
         wkt_shapely_geom = shapely.wkt.loads(wkt)
         wkt_ogr_geom = ogr.CreateGeometryFromWkt(wkt)
@@ -143,8 +147,12 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
     util.save_shapefile(wkt_ogr_geom, epsg, shp_path)
     for pth in tqdm(gdf['tiff_path']):
         print(f'Subsetting: {pth}')
-        temp_pth = pth.parent/f'subset_{pth.name}'
-        gdal.Translate(destName=str(temp_pth), srcDS=str(pth), projWin=[common_extents[0], common_extents[3], common_extents[2], common_extents[1]])
+        temp_pth = pth.parent / f'subset_{pth.name}'
+        gdal.Translate(
+            destName=str(temp_pth),
+            srcDS=str(pth),
+            projWin=[common_extents[0], common_extents[3], common_extents[2], common_extents[1]],
+        )
         pth.unlink()
         temp_pth.rename(pth)
 
@@ -156,7 +164,7 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
 
 def write_cfg(job_name: str, min_coherence: str) -> None:
     """Creates a basic config file from a template.
-    
+
     Args:
         job_name: Name of the HyP3 project.
         min_coherence: Minimum coherence for timeseries processing.
@@ -167,8 +175,8 @@ def write_cfg(job_name: str, min_coherence: str) -> None:
         lines = cfg.readlines()
 
     abspath = Path(job_name).resolve()
-    Path(f"{job_name}/MintPy").mkdir(parents = True)
-    with Path(f"{job_name}/MintPy/{job_name}.txt").open('w') as cfg:
+    Path(f'{job_name}/MintPy').mkdir(parents=True)
+    with Path(f'{job_name}/MintPy/{job_name}.txt').open('w') as cfg:
         for line in lines:
             newstring = ''
             if 'folder' in line:
@@ -182,18 +190,18 @@ def write_cfg(job_name: str, min_coherence: str) -> None:
 
 def run_mintpy(job_name: str) -> Path:
     """Calls mintpy and prepares a zip file with the outputs.
-    
+
     Args:
         job_name: Name of the HyP3 project.
-    
+
     Returns:
         Path for the output zip file.
     """
-    subprocess.call(f"smallbaselineApp.py {job_name}/MintPy/{job_name}.txt --work-dir {job_name}/MintPy", shell=True)
-    subprocess.call(f"mv {job_name}/MintPy/*.h5 {job_name}/", shell=True)
-    subprocess.call(f"mv {job_name}/MintPy/inputs/geometry*.h5 {job_name}/", shell=True)
-    subprocess.call(f"mv {job_name}/MintPy/*.txt {job_name}/", shell=True)
-    subprocess.call(f"rm -rf {job_name}/MintPy {job_name}/S1_* {job_name}/shape_*", shell=True)
+    subprocess.call(f'smallbaselineApp.py {job_name}/MintPy/{job_name}.txt --work-dir {job_name}/MintPy', shell=True)
+    subprocess.call(f'mv {job_name}/MintPy/*.h5 {job_name}/', shell=True)
+    subprocess.call(f'mv {job_name}/MintPy/inputs/geometry*.h5 {job_name}/', shell=True)
+    subprocess.call(f'mv {job_name}/MintPy/*.txt {job_name}/', shell=True)
+    subprocess.call(f'rm -rf {job_name}/MintPy {job_name}/S1_* {job_name}/shape_*', shell=True)
     output_zip = shutil.make_archive(base_name=job_name, format='zip', base_dir=job_name)
 
     return Path(output_zip)

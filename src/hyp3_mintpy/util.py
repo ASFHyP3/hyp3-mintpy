@@ -23,7 +23,7 @@ gdal.UseExceptions()
 
 def get_projection(img_path: Path | str) -> str | None:
     """Gets image projection.
-    
+
     Args:
         img_path: a string or posix path to a product in a UTM projection.
 
@@ -48,7 +48,7 @@ def get_projection(img_path: Path | str) -> str | None:
 
 def get_projections(tiff_paths: list[Path | str]) -> dict:
     """Takes: List of string or posix paths to geotiffs.
-    
+
     Returns: Dictionary key: epsg, value: number of tiffs in that epsg.
     """
     epsgs = []
@@ -64,8 +64,8 @@ def get_res(tiff: Path) -> float:
 
     Returns: The GeoTiff's resolution
     """
-    f =  gdal.Open(str(tiff))
-    return f.GetGeoTransform()[1] 
+    f = gdal.Open(str(tiff))
+    return f.GetGeoTransform()[1]
 
 
 def get_no_data_val(pth: os.PathLike) -> None | float | int:
@@ -81,7 +81,9 @@ def get_no_data_val(pth: os.PathLike) -> None | float | int:
         return 0
 
 
-def get_mintpy_vmin_vmax(dataset_path: os.PathLike, mask_path: os.PathLike | None = None, bottom_percentile: float=0.0) -> tuple[float, float]:
+def get_mintpy_vmin_vmax(
+    dataset_path: os.PathLike, mask_path: os.PathLike | None = None, bottom_percentile: float = 0.0
+) -> tuple[float, float]:
     """Gets minimum and maximum values for velocity file.
 
     Takes:
@@ -100,15 +102,16 @@ def get_mintpy_vmin_vmax(dataset_path: os.PathLike, mask_path: os.PathLike | Non
         data *= mask
 
     vel_min = np.nanpercentile(data, bottom_percentile) * 100
-    vel_max = np.nanpercentile(data, 1.0-bottom_percentile) * 100
-    
+    vel_max = np.nanpercentile(data, 1.0 - bottom_percentile) * 100
+
     vmin = -np.nanmax([np.abs(vel_min), np.abs(vel_max)])
-    vmax = np.nanmax([np.abs(vel_min), np.abs(vel_max)])  
+    vmax = np.nanmax([np.abs(vel_min), np.abs(vel_max)])
     return (vmin, vmax)
+
 
 def get_recent_mintpy_config_path() -> os.PathLike | None:
     """Gets the path for config file.
-    
+
     Returns the mintpy config path saved in .recent_mintpy_config
     if it exists else None
     """
@@ -116,19 +119,19 @@ def get_recent_mintpy_config_path() -> os.PathLike | None:
 
     try:
         with recent_mintpy_path.open() as f:
-            line = f.readline()    
+            line = f.readline()
             if Path(line).exists():
                 return Path(line)
     except FileNotFoundError:
         return None
     except:
         raise
-    return None # Found a recent path but it no longer exists
+    return None  # Found a recent path but it no longer exists
 
 
 def write_recent_mintpy_config_path(pth: str | os.PathLike) -> None:
     """Writes a config file for mintpy.
-    
+
     Takes: A string path or posix path to a GeoTiff.
     """
     recent_mintpy_path = Path.cwd() / '.recent_mintpy_config'
@@ -147,11 +150,11 @@ def get_epsg(geotiff_path: str | os.PathLike) -> str:
     srs.ImportFromWkt(proj)
     srs.AutoIdentifyEPSG()
     return srs.GetAuthorityCode(None)
-    
 
-def get_geotiff_bbox(geotiff_path: str | os.PathLike, dst_epsg: str| None = None) -> Polygon:
+
+def get_geotiff_bbox(geotiff_path: str | os.PathLike, dst_epsg: str | None = None) -> Polygon:
     """Gets bbox for geotiff file.
-    
+
     Takes:
     geotiff_path: path to a GeoTiff.
     dst_epsg: optional EPSG for reprojection.
@@ -162,20 +165,14 @@ def get_geotiff_bbox(geotiff_path: str | os.PathLike, dst_epsg: str| None = None
         bounds = dataset.bounds
         min_x, min_y = (bounds.left, bounds.bottom)
         max_x, max_y = (bounds.right, bounds.top)
-        
+
     if dst_epsg:
         srs_crs = dataset.crs
         transformer = Transformer.from_crs(srs_crs, f'EPSG:{str(dst_epsg)}', always_xy=True)
         min_x, min_y = transformer.transform(bounds.left, bounds.bottom)
         max_x, max_y = transformer.transform(bounds.right, bounds.top)
 
-    return Polygon([
-        (min_x, min_y),
-        (max_x, min_y),
-        (max_x, max_y),
-        (min_x, max_y),
-        (min_x, min_y)
-    ])
+    return Polygon([(min_x, min_y), (max_x, min_y), (max_x, max_y), (min_x, max_y), (min_x, min_y)])
 
 
 def possible_wgs84_wkt(wkt: str) -> bool:
@@ -185,19 +182,23 @@ def possible_wgs84_wkt(wkt: str) -> bool:
 
     Returns: True if the WKT could be WGS84 else False.
     """
-    lon_regex = r"(?:\(|,)(-?\d{1,6}\.?\d{0,6})"
-    lat_regex = r"(?<=\s)-?\d{,6}.?\d{,6}"
-    
+    lon_regex = r'(?:\(|,)(-?\d{1,6}\.?\d{0,6})'
+    lat_regex = r'(?<=\s)-?\d{,6}.?\d{,6}'
+
     lon_results = re.findall(lon_regex, wkt)
     lon_results = [float(n) for n in lon_results]
     lat_results = re.findall(lat_regex, wkt)
     lat_results = [float(n) for n in lat_results]
-    if -180.0 <= np.min(lon_results) and np.max(lon_results) <= 180.0 \
-    and -90.0 <= np.min(lat_results) and np.max(lat_results) <= 90.0:
+    if (
+        -180.0 <= np.min(lon_results)
+        and np.max(lon_results) <= 180.0
+        and -90.0 <= np.min(lat_results)
+        and np.max(lat_results) <= 90.0
+    ):
         while True:
-            print("Detected possible WGS84 (lat/lon) coordinates")
-            wgs84 = input("Are these lat/lon coordinates? (y or n)")
-            if wgs84 in ["y", "n"]:
+            print('Detected possible WGS84 (lat/lon) coordinates')
+            wgs84 = input('Are these lat/lon coordinates? (y or n)')
+            if wgs84 in ['y', 'n']:
                 do_wgs84 = True if wgs84 == 'y' else False
                 return do_wgs84
     else:
@@ -206,7 +207,7 @@ def possible_wgs84_wkt(wkt: str) -> bool:
 
 def project_wkt_polygon(wkt_polygon: str, source_epsg: int | str, target_epsg: int | str) -> str:
     """Projects polygon into target EPSG.
-    
+
     Takes:
     wkt_polygon: A Well-Known-Text POLYGON string
     source_epsg: wkt_polygon's EPSG
@@ -215,7 +216,7 @@ def project_wkt_polygon(wkt_polygon: str, source_epsg: int | str, target_epsg: i
     Returns: A Well-Known-Text string in the target EPSG
     """
     polygon = shapely.wkt.loads(wkt_polygon)
-    transformer = Transformer.from_crs(f"EPSG:{source_epsg}", f"EPSG:{target_epsg}", always_xy=True)
+    transformer = Transformer.from_crs(f'EPSG:{source_epsg}', f'EPSG:{target_epsg}', always_xy=True)
     transformed_polygon = transform(transformer.transform, polygon)
     return transformed_polygon.wkt
 
@@ -227,7 +228,9 @@ def get_valid_wkt() -> tuple[str, BaseGeometry]:
     """
     while True:
         try:
-            wkt = input('Please enter your WKT (e.g. "POLYGON((-148.4241 64.6077,-146.9478 64.6077,-146.9478 65.1052,-148.4241 65.1052,-148.4241 64.6077))": ')
+            wkt = input(
+                'Please enter your WKT (e.g. "POLYGON((-148.4241 64.6077,-146.9478 64.6077,-146.9478 65.1052,-148.4241 65.1052,-148.4241 64.6077))": '
+            )
 
             shapely_geom = shapely.wkt.loads(wkt)
 
@@ -242,22 +245,22 @@ def get_valid_wkt() -> tuple[str, BaseGeometry]:
 
 def check_within_bounds(wkt_shapely_geom: BaseGeometry, gdf: gpd.GeoDataFrame) -> bool:
     """Checks if elements in the geopandas dataframe are within the AOI.
-    
+
     wkt_shapely_geom: A shapely Polygon describing a subset AOI
     gdf: a geopandas.GeoDataFrame containing geometries for each dataset to subset to wkt_shapely_geom
 
     returns: True if wkt_shapely_geom is contained within all geometries in the GeoDataFrame, else False
-    """   
+    """
     return all(wkt_shapely_geom.within(geom) for geom in gdf['geometry'])
 
 
 def save_shapefile(
-    ogr_geom: ogr.Geometry, 
-    epsg: str | int, 
-    dst_path: str | os.PathLike | None=Path.cwd()/f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp'
+    ogr_geom: ogr.Geometry,
+    epsg: str | int,
+    dst_path: str | os.PathLike | None = Path.cwd() / f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp',
 ) -> None:
     """Writes a shapefile from an ogr geometry in a given projection.
-    
+
     ogr_geom: An ogr geometry
     epsg: the EPSG projection to apply to the shapefile
     dst_path: (optional) shapefile destination path
@@ -272,9 +275,8 @@ def save_shapefile(
 
     feat = ogr.Feature(defn)
     feat.SetGeometry(ogr_geom)
-    
+
     layer.CreateFeature(feat)
     feat = None
 
     ds = layer = feat = None
-
