@@ -1,27 +1,34 @@
+"""util functions."""
+
+import os
+import re
 from collections import Counter
 from datetime import datetime
-import os
 from pathlib import Path
-import re
-from typing import List, Union, Dict, Tuple, Optional
 
 import geopandas as gpd
-from mintpy.utils import readfile
 import numpy as np
-from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
-from pyproj import Transformer
 import rasterio
-from shapely.geometry import Polygon
-from shapely.ops import transform
 import shapely.wkt
+from mintpy.utils import readfile
+from osgeo import gdal, ogr, osr
+from pyproj import Transformer
+from shapely.geometry import Polygon
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import transform
 
 
-def get_projection(img_path: Union[Path, str]) -> Union[str, None]:
-    """
-    Takes: a string or posix path to a product in a UTM projection
+gdal.UseExceptions()
 
-    Returns: the projection (as a string) or None if none found
+
+def get_projection(img_path: Path | str) -> str | None:
+    """Gets image projection.
+    
+    Args:
+        img_path: a string or posix path to a product in a UTM projection.
+
+    Returns:
+        the projection (as a string) or None if none found
     """
     img_path = str(img_path)
     try:
@@ -39,56 +46,52 @@ def get_projection(img_path: Union[Path, str]) -> Union[str, None]:
         return None
 
 
-def get_projections(tiff_paths: List[Union[os.PathLike, str]]) -> Dict:
-    """
-    Takes: List of string or posix paths to geotiffs
+def get_projections(tiff_paths: list[Path | str]) -> dict:
+    """Takes: List of string or posix paths to geotiffs.
     
-    Returns: Dictionary key: epsg, value: number of tiffs in that epsg 
+    Returns: Dictionary key: epsg, value: number of tiffs in that epsg.
     """
     epsgs = []
     for p in tiff_paths:
         epsgs.append(get_projection(p))
 
-    epsgs = dict(Counter(epsgs))
-    return epsgs
+    epsgs_dic = dict(Counter(epsgs))
+    return epsgs_dic
 
 
-def get_res(tiff: os.PathLike) -> float:
-    """
-    Takes: path to a GeoTiff
+def get_res(tiff: Path) -> float:
+    """Takes: path to a GeoTiff.
 
     Returns: The GeoTiff's resolution
     """
-    tiff = str(tiff)
-    f =  gdal.Open(tiff)
+    f =  gdal.Open(str(tiff))
     return f.GetGeoTransform()[1] 
 
 
-def get_no_data_val(pth: os.PathLike) -> Union[None, float, int]:
-    """
-    Takes: path to a GeoTiff
+def get_no_data_val(pth: os.PathLike) -> None | float | int:
+    """Takes: path to a GeoTiff.
 
-    Returns: The GeoTiff's no-data value
+    Returns: The GeoTiff's no-data value.
     """
-    pth = str(pth)
     f = gdal.Open(str(pth))
     if f.GetRasterBand(1).DataType > 5:
         no_data_val = f.GetRasterBand(1).GetNoDataValue()
-        return np.nan if no_data_val == None else f.GetRasterBand(1).GetNoDataValue()
+        return np.nan if no_data_val is None else f.GetRasterBand(1).GetNoDataValue()
     else:
         return 0
 
 
-def get_mintpy_vmin_vmax(dataset_path: os.PathLike, mask_path: os.PathLike=None, bottom_percentile: float=0.0) -> Tuple[float, float]:
-    """
-    Takes: 
+def get_mintpy_vmin_vmax(dataset_path: os.PathLike, mask_path: os.PathLike | None = None, bottom_percentile: float=0.0) -> tuple[float, float]:
+    """Gets minimum and maximum values for velocity file.
+
+    Takes:
     dataset_path: path to a MintPy hdf5 dataset
     mask_path: path to a MintPy hdf5 dataset containing a coherence mask (such as 'maskTempCoh.h5')
     bottom_percentile: lower end of the percentile you would like to use for vmin, vmax
                        The upper end of the percentile will be symetrical with the passed lower end.
                        Passing 0.05 as the bottom_percentile will result in 1.0 - 0.05 = 0.95 being used for the high end
 
-    Returns: vmin, vmax values covering the data (or masked data), centered at zero
+    Returns: vmin, vmax values covering the data (or masked data), centered at zero.
     """
     data, _ = readfile.read(dataset_path)
 
@@ -103,15 +106,16 @@ def get_mintpy_vmin_vmax(dataset_path: os.PathLike, mask_path: os.PathLike=None,
     vmax = np.nanmax([np.abs(vel_min), np.abs(vel_max)])  
     return (vmin, vmax)
 
-def get_recent_mintpy_config_path() -> Union[os.PathLike, None]:
-    """
+def get_recent_mintpy_config_path() -> os.PathLike | None:
+    """Gets the path for config file.
+    
     Returns the mintpy config path saved in .recent_mintpy_config
     if it exists else None
     """
     recent_mintpy_path = Path.cwd() / '.recent_mintpy_config'
 
     try:
-        with open(recent_mintpy_path, 'r') as f:
+        with recent_mintpy_path.open() as f:
             line = f.readline()    
             if Path(line).exists():
                 return Path(line)
@@ -122,17 +126,20 @@ def get_recent_mintpy_config_path() -> Union[os.PathLike, None]:
     return None # Found a recent path but it no longer exists
 
 
-def write_recent_mintpy_config_path(pth: Union[str, os.PathLike]):
+def write_recent_mintpy_config_path(pth: str | os.PathLike) -> None:
+    """Writes a config file for mintpy.
+    
+    Takes: A string path or posix path to a GeoTiff.
+    """
     recent_mintpy_path = Path.cwd() / '.recent_mintpy_config'
-    with open(recent_mintpy_path, 'w+') as f:
+    with recent_mintpy_path.open('w+') as f:
         f.write(str(pth))
 
 
-def get_epsg(geotiff_path: Union[str, os.PathLike]) -> str:
-    """
-    Takes: A string path or posix path to a GeoTiff
+def get_epsg(geotiff_path: str | os.PathLike) -> str:
+    """Takes: A string path or posix path to a GeoTiff.
 
-    Returns: The string EPSG of the Geotiff
+    Returns: The string EPSG of the Geotiff.
     """
     ds = gdal.Open(str(geotiff_path))
     proj = ds.GetProjection()
@@ -142,13 +149,14 @@ def get_epsg(geotiff_path: Union[str, os.PathLike]) -> str:
     return srs.GetAuthorityCode(None)
     
 
-def get_geotiff_bbox(geotiff_path: Union[str, os.PathLike], dst_epsg: str=None) -> Polygon:
-    """
+def get_geotiff_bbox(geotiff_path: str | os.PathLike, dst_epsg: str| None = None) -> Polygon:
+    """Gets bbox for geotiff file.
+    
     Takes:
-    geotiff_path: path to a GeoTiff
-    dst_epsg: optional EPSG for reprojection
+    geotiff_path: path to a GeoTiff.
+    dst_epsg: optional EPSG for reprojection.
 
-    Returns: The GeoTiffs bounding box as a shapely.geometry.Polygon
+    Returns: The GeoTiffs bounding box as a shapely.geometry.Polygon.
     """
     with rasterio.open(geotiff_path) as dataset:
         bounds = dataset.bounds
@@ -171,13 +179,11 @@ def get_geotiff_bbox(geotiff_path: Union[str, os.PathLike], dst_epsg: str=None) 
 
 
 def possible_wgs84_wkt(wkt: str) -> bool:
-    """
-    If WKT Polygon falls within the range of valid WGS84 coords,
-    prompts user to indicate whether the WKT is WGS84 or UTM
+    """If WKT Polygon falls within the range of valid WGS84 coords, prompts user to indicate whether the WKT is WGS84 or UTM.
 
-    Takes: Well-Known-Text polygon string
+    Takes: Well-Known-Text polygon string.
 
-    Returns: True if the WKT could be WGS84 else False
+    Returns: True if the WKT could be WGS84 else False.
     """
     lon_regex = r"(?:\(|,)(-?\d{1,6}\.?\d{0,6})"
     lat_regex = r"(?<=\s)-?\d{,6}.?\d{,6}"
@@ -192,15 +198,16 @@ def possible_wgs84_wkt(wkt: str) -> bool:
             print("Detected possible WGS84 (lat/lon) coordinates")
             wgs84 = input("Are these lat/lon coordinates? (y or n)")
             if wgs84 in ["y", "n"]:
-                wgs84 = True if wgs84 == 'y' else False
-                return wgs84
+                do_wgs84 = True if wgs84 == 'y' else False
+                return do_wgs84
     else:
         return False
 
 
-def project_wkt_polygon(wkt_polygon: str, source_epsg: Union[int, str], target_epsg: Union[int, str]) -> str:
-    """
-    Takes: 
+def project_wkt_polygon(wkt_polygon: str, source_epsg: int | str, target_epsg: int | str) -> str:
+    """Projects polygon into target EPSG.
+    
+    Takes:
     wkt_polygon: A Well-Known-Text POLYGON string
     source_epsg: wkt_polygon's EPSG
     target_epsg: the target EPSG for projection
@@ -213,30 +220,29 @@ def project_wkt_polygon(wkt_polygon: str, source_epsg: Union[int, str], target_e
     return transformed_polygon.wkt
 
 
-def get_valid_wkt() -> Tuple[str, Polygon]:
-    """
-    Prompts user for WKT
+def get_valid_wkt() -> tuple[str, BaseGeometry]:
+    """Prompts user for WKT.
 
     Returns: WKT string, Shapely Polygon from WKT
     """
-    
     while True:
         try:
             wkt = input('Please enter your WKT (e.g. "POLYGON((-148.4241 64.6077,-146.9478 64.6077,-146.9478 65.1052,-148.4241 65.1052,-148.4241 64.6077))": ')
 
             shapely_geom = shapely.wkt.loads(wkt)
-            
+
             if not gpd.GeoSeries([shapely_geom]).is_valid[0]:
                 print('Invalid geometry detected. Please enter a valid WKT.')
                 continue
-            
+
             return wkt, shapely_geom
         except Exception as e:
             print(f'Error: {e}. Please enter a valid WKT.')
 
 
-def check_within_bounds(wkt_shapely_geom: Polygon, gdf: gpd.GeoDataFrame) -> bool:
-    """
+def check_within_bounds(wkt_shapely_geom: BaseGeometry, gdf: gpd.GeoDataFrame) -> bool:
+    """Checks if elements in the geopandas dataframe are within the AOI.
+    
     wkt_shapely_geom: A shapely Polygon describing a subset AOI
     gdf: a geopandas.GeoDataFrame containing geometries for each dataset to subset to wkt_shapely_geom
 
@@ -247,11 +253,10 @@ def check_within_bounds(wkt_shapely_geom: Polygon, gdf: gpd.GeoDataFrame) -> boo
 
 def save_shapefile(
     ogr_geom: ogr.Geometry, 
-    epsg: Union[str, int], 
-    dst_path: Optional[Union[str, os.PathLike]]=Path.cwd()/f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp'
+    epsg: str | int, 
+    dst_path: str | os.PathLike | None=Path.cwd()/f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp'
 ) -> None:
-    """
-    Writes a shapefile from an ogr geometry in a given projection
+    """Writes a shapefile from an ogr geometry in a given projection.
     
     ogr_geom: An ogr geometry
     epsg: the EPSG projection to apply to the shapefile
@@ -269,7 +274,7 @@ def save_shapefile(
     feat.SetGeometry(ogr_geom)
     
     layer.CreateFeature(feat)
-    feat = geom = None
+    feat = None
 
-    ds = layer = feat = geom = None
+    ds = layer = feat = None
 

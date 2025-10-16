@@ -2,12 +2,13 @@
 
 import logging
 import os
+import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 
-import hyp3_sdk as sdk
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import write_credentials_to_netrc_file
+
 from hyp3_mintpy.process import process_mintpy
 
 

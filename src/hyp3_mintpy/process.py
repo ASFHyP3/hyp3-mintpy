@@ -1,6 +1,5 @@
 """mintpy processing."""
 
-import glob
 import logging
 import os
 import shutil
@@ -9,68 +8,67 @@ from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
-import opensarlab_lib as osl
-import hyp3_mintpy
 import hyp3_sdk as sdk
+import opensarlab_lib as osl
 import shapely.wkt
-from hyp3_mintpy import util
 from osgeo import gdal, ogr
 from rasterio.warp import transform_bounds
 from tqdm.auto import tqdm
 
+import hyp3_mintpy
+from hyp3_mintpy import util
+
+
 log = logging.getLogger(__name__)
 
 
-def download_pairs(job_name, folder = None):
-    """
-    Downloads HyP3 products and renames files to meet MintPy standards
+def download_pairs(job_name: str, folder: str | None = None) -> None:
+    """Downloads HyP3 products and renames files to meet MintPy standards.
     
     Args:
-        project_name: Name of the HyP3 project.
-        hyp3: Instance of HyP3 where the user has been logged in.
+        job_name: Name of the HyP3 project.
         folder: Folder name that will contain the downloaded products. If None it will create a folder with the project name.
     """
     hyp3 = sdk.HyP3()
     jobs = hyp3.find_jobs(name=job_name)
 
-    cwd = os.getcwd()
+    cwd = Path.cwd()
     if folder is None:
         folder = job_name
-    if not os.path.isdir(folder):
-        os.mkdir(folder)
-    folder = Path(folder)
-    file_list = jobs.download_files(folder)
+    if not Path(folder).is_dir():
+        Path.mkdir(Path(folder))
+
+    file_list = jobs.download_files(Path(folder))
     for z in file_list:
-        shutil.unpack_archive(str(z), str(folder))
+        shutil.unpack_archive(str(z), folder)
         z.unlink()
 
-    os.chdir(str(folder))
-    folders=glob.glob('./*')
-    folders=[fol for fol in folders if os.path.isdir(fol)]
+    os.chdir(folder)
+    folders=list(Path('./').glob('*'))
+    folders=[fol for fol in folders if Path(fol).is_dir()]
 
     for fol in folders:
-        os.chdir(fol)
-        fs=glob.glob('./*')
-        txts=[t for t in fs if '.txt' in t and 'README' not in t]
-        ar=open(txts[0])
+        os.chdir(str(fol))
+        fs=list(Path('./').glob('*'))
+        txts=[t for t in fs if '.txt' in str(t) and 'README' not in str(t)]
+        ar=txts[0].open()
         lines=ar.readlines()
         ar.close()
         burst=lines[0].split('_')[1]+'_'+lines[0].split('_')[2]
         for f in fs:
-            name=os.path.basename(f)
+            name=f.name
             newname='S1_'+burst+'_'+'_'.join([n for n in name.split('_')[10::]])
             if '.txt' in newname and 'README' not in newname:
                 foldername=newname.split('.')[0]
             subprocess.call('mv '+name+' '+newname,shell=True)
         os.chdir(cwd)
-        os.chdir(str(folder))
-        subprocess.call('mv '+os.path.basename(fol)+' '+foldername,shell=True)
+        os.chdir(folder)
+        subprocess.call('mv '+fol.name+' '+foldername,shell=True)
     os.chdir(cwd)
 
 
-def set_same_frame(folder, wgs84 = False):
-    """
-    Checks the coordinate system for all the files in the folder and reprojects them if necessary
+def set_same_frame(folder: str, wgs84: bool = False) -> None:
+    """Checks the coordinate system for all the files in the folder and reprojects them if necessary.
     
     Args:
         folder: Path to the folder that has the HyP3 products.
@@ -126,7 +124,6 @@ def set_same_frame(folder, wgs84 = False):
         )
     common_extents = osl.get_common_coverage_extents(unw)
     xmin, ymin, xmax, ymax = transform_bounds(int(osl.get_projection(str(unw[0]))), 3857, *common_extents)
-    common_extents_3857 = [xmin, ymin, xmax, ymax]
     print(common_extents)
     correct_wkt_input = False
     while not correct_wkt_input:
@@ -157,19 +154,25 @@ def set_same_frame(folder, wgs84 = False):
             gdal.Warp(str(pth), str(pth), dstSRS='EPSG:4326')
 
 
-def write_cfg(job_name: str, min_coherence: str):
-    cfg_folder = os.path.dirname(hyp3_mintpy.__file__) + '/schemas'
+def write_cfg(job_name: str, min_coherence: str) -> None:
+    """Creates a basic config file from a template.
+    
+    Args:
+        job_name: Name of the HyP3 project.
+        min_coherence: Minimum coherence for timeseries processing.
+    """
+    cfg_folder = Path(hyp3_mintpy.__file__).parent / 'schemas'
 
-    with open(f'{cfg_folder}/config.txt') as cfg:
+    with Path(f'{cfg_folder}/config.txt').open() as cfg:
         lines = cfg.readlines()
 
-    abspath = os.path.abspath(job_name)
-    os.makedirs(f"{job_name}/MintPy", exist_ok=True)
-    with open(f"{job_name}/MintPy/{job_name}.txt", 'w') as cfg:
+    abspath = Path(job_name).resolve()
+    Path(f"{job_name}/MintPy").mkdir(parents = True)
+    with Path(f"{job_name}/MintPy/{job_name}.txt").open('w') as cfg:
         for line in lines:
             newstring = ''
             if 'folder' in line:
-                newstring += line.replace('folder', abspath)
+                newstring += line.replace('folder', str(abspath))
             elif 'min_coherence' in line:
                 newstring += line.replace('min_coherence', min_coherence)
             else:
@@ -177,7 +180,15 @@ def write_cfg(job_name: str, min_coherence: str):
             cfg.write(newstring)
 
 
-def run_mintpy(job_name):
+def run_mintpy(job_name: str) -> Path:
+    """Calls mintpy and prepares a zip file with the outputs.
+    
+    Args:
+        job_name: Name of the HyP3 project.
+    
+    Returns:
+        Path for the output zip file.
+    """
     subprocess.call(f"smallbaselineApp.py {job_name}/MintPy/{job_name}.txt --work-dir {job_name}/MintPy", shell=True)
     subprocess.call(f"mv {job_name}/MintPy/*.h5 {job_name}/", shell=True)
     subprocess.call(f"mv {job_name}/MintPy/inputs/geometry*.h5 {job_name}/", shell=True)
@@ -192,7 +203,11 @@ def process_mintpy(job_name: str, min_coherence: float) -> Path:
     """Create a greeting product.
 
     Args:
-        greeting: Write this greeting to a product file (Default: "Hello world!" )
+        job_name: Name of the HyP3 project.
+        min_coherence: Minimum coherence for timeseries processing.
+
+    Returns:
+        Path for the output zip file.
     """
     download_pairs(job_name)
     set_same_frame(job_name)
