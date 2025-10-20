@@ -22,31 +22,16 @@ from hyp3_mintpy import util
 log = logging.getLogger(__name__)
 
 
-def download_pairs(job_name: str, folder: str | None = None) -> None:
-    """Downloads HyP3 products and renames files to meet MintPy standards.
+def rename_products(folder: str) -> None:
+    """Rename downloaded products to make them compatible with MintPy.
 
     Args:
-        job_name: Name of the HyP3 project.
-        folder: Folder name that will contain the downloaded products. If None it will create a folder with the project name.
+        folder: Path for the folder that has the downloaded products.
     """
-    hyp3 = sdk.HyP3()
-    jobs = hyp3.find_jobs(name=job_name)
-
     cwd = Path.cwd()
-    if folder is None:
-        folder = job_name
-    if not Path(folder).is_dir():
-        Path.mkdir(Path(folder))
-
-    file_list = jobs.download_files(Path(folder))
-    for z in file_list:
-        shutil.unpack_archive(str(z), folder)
-        z.unlink()
-
     os.chdir(folder)
     folders = list(Path('./').glob('*'))
     folders = [fol for fol in folders if Path(fol).is_dir()]
-
     for fol in folders:
         os.chdir(str(fol))
         fs = list(Path('./').glob('*'))
@@ -58,6 +43,7 @@ def download_pairs(job_name: str, folder: str | None = None) -> None:
         for f in fs:
             name = f.name
             newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[10::]])
+            print(newname)
             if '.txt' in newname and 'README' not in newname:
                 foldername = newname.split('.')[0]
             subprocess.call('mv ' + name + ' ' + newname, shell=True)
@@ -65,6 +51,29 @@ def download_pairs(job_name: str, folder: str | None = None) -> None:
         os.chdir(folder)
         subprocess.call('mv ' + fol.name + ' ' + foldername, shell=True)
     os.chdir(cwd)
+
+
+def download_pairs(job_name: str, folder: str | None = None) -> None:
+    """Downloads HyP3 products and renames files to meet MintPy standards.
+
+    Args:
+        job_name: Name of the HyP3 project.
+        folder: Folder name that will contain the downloaded products. If None it will create a folder with the project name.
+    """
+    hyp3 = sdk.HyP3()
+    jobs = hyp3.find_jobs(name=job_name)
+
+    if folder is None:
+        folder = job_name
+    if not Path(folder).is_dir():
+        Path.mkdir(Path(folder))
+
+    file_list = jobs.download_files(Path(folder))
+    for z in file_list:
+        shutil.unpack_archive(str(z), folder)
+        z.unlink()
+
+    rename_products(folder)
 
 
 def set_same_frame(folder: str, wgs84: bool = False) -> None:
