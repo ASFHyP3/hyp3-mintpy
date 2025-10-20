@@ -58,7 +58,7 @@ def test_write_cfg():
     with Path(f'{job_name}/MintPy/{job_name}.txt').open() as cfg:
         lines = cfg.readlines()
 
-    minCoh = 0
+    minCoh = 0.0
     for line in lines:
         if 'minCoherence' in line:
             minCoh = float(line.split('=')[1])
