@@ -45,6 +45,8 @@ def test_set_same_frame(test_data_directory):
 
     assert epsg_unw == epsg_mask
 
+    subprocess.call('rm -rf test', shell=True)
+
 
 def test_write_cfg():
     job_name = 'test_job'

@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -6,5 +5,5 @@ import pytest
 
 @pytest.fixture
 def test_data_directory():
-    here = Path(os.path.dirname(__file__))
+    here = Path(__file__).parent
     return here / 'data'
