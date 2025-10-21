@@ -4,15 +4,13 @@ import logging
 import os
 import shutil
 import subprocess
-from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
 import hyp3_sdk as sdk
 import opensarlab_lib as osl
 import shapely.wkt
-from osgeo import gdal, ogr
-from rasterio.warp import transform_bounds
+from osgeo import gdal
 from tqdm.auto import tqdm
 
 import hyp3_mintpy
@@ -76,6 +74,68 @@ def download_pairs(job_name: str, folder: str | None = None) -> None:
     rename_products(folder)
 
 
+def set_same_epsg(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Checks if the EPSG is the same to all files if not it reprojects them.
+
+    Args:
+        gdf: Geopandas dataframe with all the tiff files.
+
+    Returns:
+        Geopandas dataframe with reprojected files.
+    """
+    proj_count = gdf['EPSG'].value_counts()
+    predominant_epsg = proj_count.idxmax()
+    print(f'reprojecting to predominant EPSG: {predominant_epsg}')
+    tiff_path = gdf['tiff_path'].tolist()
+    for _, row in gdf.loc[gdf['EPSG'] != predominant_epsg].iterrows():
+        pth = row['tiff_path']
+        no_data_val = util.get_no_data_val(pth)
+        res = util.get_res(pth)
+
+        temp = pth.parent / f'temp_{pth.stem}.tif'
+        pth.rename(temp)
+        src_epsg = row['EPSG']
+
+        warp_options = {
+            'dstSRS': f'EPSG:{predominant_epsg}',
+            'srcSRS': f'EPSG:{src_epsg}',
+            'targetAlignedPixels': True,
+            'xRes': res,
+            'yRes': res,
+            'dstNodata': no_data_val,
+        }
+        gdal.Warp(str(pth), str(temp), **warp_options)
+        temp.unlink()
+
+    gdf = gpd.GeoDataFrame(
+        {
+            'tiff_path': tiff_path,
+            'EPSG': [util.get_epsg(p) for p in tiff_path],
+            'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
+        }
+    )
+
+    return gdf
+
+
+def check_extent(gdf: gpd.GeoDataFrame, common_extents: list) -> None:
+    """Checks the geometries in the GeoDataFrame are within the common_extents.
+
+    Args:
+        gdf: Geopandas dataframe with all the tiff files.
+        common_extents: List with the common extent coordinates.
+    """
+    wkt = (
+        f'POLYGON(({common_extents[0]} {common_extents[1]}, {common_extents[2]} {common_extents[1]}, {common_extents[2]} '
+        f'{common_extents[3]}, {common_extents[0]} {common_extents[3]}, {common_extents[0]} {common_extents[1]}))'
+    )
+
+    wkt_shapely_geom = shapely.wkt.loads(wkt)
+    if not util.check_within_bounds(wkt_shapely_geom, gdf):
+        print('WKT exceeds bounds of at least one dataset')
+        raise Exception('Error determining area of common coverage')
+
+
 def set_same_frame(folder: str, wgs84: bool = False) -> None:
     """Checks the coordinate system for all the files in the folder and reprojects them if necessary.
 
@@ -103,57 +163,13 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
 
     # check for multiple projections and project to the predominant EPSG
     if gdf['EPSG'].nunique() > 1:
-        proj_count = gdf['EPSG'].value_counts()
-        predominant_epsg = proj_count.idxmax()
-        print(f'reprojecting to predominant EPSG: {predominant_epsg}')
-        for _, row in gdf.loc[gdf['EPSG'] != predominant_epsg].iterrows():
-            pth = row['tiff_path']
-            no_data_val = util.get_no_data_val(pth)
-            res = util.get_res(pth)
+        gdf = set_same_epsg(gdf)
 
-            temp = pth.parent / f'temp_{pth.stem}.tif'
-            pth.rename(temp)
-            src_epsg = row['EPSG']
-
-            warp_options = {
-                'dstSRS': f'EPSG:{predominant_epsg}',
-                'srcSRS': f'EPSG:{src_epsg}',
-                'targetAlignedPixels': True,
-                'xRes': res,
-                'yRes': res,
-                'dstNodata': no_data_val,
-            }
-            gdal.Warp(str(pth), str(temp), **warp_options)
-            temp.unlink()
-
-        gdf = gpd.GeoDataFrame(
-            {
-                'tiff_path': tiff_path,
-                'EPSG': [util.get_epsg(p) for p in tiff_path],
-                'geometry': [util.get_geotiff_bbox(p) for p in tiff_path],
-            }
-        )
+    # check the file extent is within the common extent
     common_extents = osl.get_common_coverage_extents(unw)
-    xmin, ymin, xmax, ymax = transform_bounds(int(osl.get_projection(str(unw[0]))), 3857, *common_extents)
-    print(common_extents)
-    correct_wkt_input = False
-    while not correct_wkt_input:
-        epsg = int(gdf.iloc[0]['EPSG'])
-        wkt = (
-            f'POLYGON(({common_extents[0]} {common_extents[1]}, {common_extents[2]} {common_extents[1]}, {common_extents[2]} '
-            f'{common_extents[3]}, {common_extents[0]} {common_extents[3]}, {common_extents[0]} {common_extents[1]}))'
-        )
-        print(wkt)
-        wkt_shapely_geom = shapely.wkt.loads(wkt)
-        wkt_ogr_geom = ogr.CreateGeometryFromWkt(wkt)
-        if not util.check_within_bounds(wkt_shapely_geom, gdf):
-            print('WKT exceeds bounds of at least one dataset')
-            raise Exception('Error determining area of common coverage')
+    check_extent(gdf, common_extents)
 
-        correct_wkt_input = True
-
-    shp_path = data_path / f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp'
-    util.save_shapefile(wkt_ogr_geom, epsg, shp_path)
+    # reprojects all files to the common extent
     for pth in tqdm(gdf['tiff_path']):
         print(f'Subsetting: {pth}')
         temp_pth = pth.parent / f'subset_{pth.name}'
@@ -165,6 +181,7 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
         pth.unlink()
         temp_pth.rename(pth)
 
+    # reprojects all files to WGS84 if necessary
     if wgs84:
         for pth in tqdm(gdf['tiff_path']):
             print(f'Converting {pth} to WGS84')
@@ -227,7 +244,7 @@ def process_mintpy(job_name: str, min_coherence: float) -> Path:
         Path for the output zip file.
     """
     download_pairs(job_name)
-    set_same_frame(job_name)
+    set_same_frame(job_name, wgs84=True)
 
     write_cfg(job_name, str(min_coherence))
 
