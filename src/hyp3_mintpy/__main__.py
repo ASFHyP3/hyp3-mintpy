@@ -19,9 +19,9 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--job-name', help='Write this greeting to a product file', required=True)
+    parser.add_argument('--job-name', help='The name of the HyP3 job', required=True)
     parser.add_argument(
-        '--min-coherence', default=0.01, type=float, help='Write this greeting to a product file', required=False
+        '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
     )
 
     args = parser.parse_args()
