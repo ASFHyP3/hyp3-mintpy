@@ -1,0 +1,13 @@
+mintpy.load.processor        = hyp3
+##---------geometry datasets:
+mintpy.load.demFile          = folder/*/*_dem*.tif
+mintpy.load.incAngleFile     = folder/*/*_lv_theta*.tif
+mintpy.load.azAngleFile      = folder/*/*_lv_phi*.tif
+mintpy.load.waterMaskFile    = folder/*/*_water_mask*.tif
+##---------interferogram datasets:
+mintpy.load.unwFile          = folder/*/*_unw_phase*.tif
+mintpy.load.corFile          = folder/*/*_corr*.tif
+mintpy.network.minCoherence    = min_coherence
+mintpy.networkInversion.minTempCoh  = min_coherence
+mintpy.reference.minCoherence  = min_coherence
+mintpy.troposphericDelay.method = no
