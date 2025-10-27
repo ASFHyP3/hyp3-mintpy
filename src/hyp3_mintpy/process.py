@@ -31,6 +31,9 @@ def rename_products(folder: str) -> None:
     folders = list(Path('./').glob('*'))
     folders = [fol for fol in folders if Path(fol).is_dir()]
     for fol in folders:
+        new = True
+        if str(fol).count('_') > 7:
+            new = False
         os.chdir(str(fol))
         fs = list(Path('./').glob('*'))
         txts = [t for t in fs if '.txt' in str(t) and 'README' not in str(t)]
