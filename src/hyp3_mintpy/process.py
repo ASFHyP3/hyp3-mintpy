@@ -44,9 +44,9 @@ def rename_products(folder: str) -> None:
         for f in fs:
             name = f.name
             if new:
-                newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[3::]])
+                newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[3:]])
             else:
-                newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[10::]])
+                newname = 'S1_' + burst + '_' + '_'.join([n for n in name.split('_')[10:]])
             print(newname)
             if '.txt' in newname and 'README' not in newname:
                 foldername = newname.split('.')[0]
