@@ -1,9 +1,13 @@
 """mintpy processing for HyP3."""
 
 import logging
+import os
+import warnings
 from argparse import ArgumentParser
+from pathlib import Path
 
 from hyp3lib.aws import upload_file_to_s3
+from hyp3lib.fetch import write_credentials_to_netrc_file
 
 from hyp3_mintpy.process import process_mintpy
 
@@ -15,7 +19,10 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--greeting', default='Hello world!', help='Write this greeting to a product file')
+    parser.add_argument('--job-name', help='The name of the HyP3 job', required=True)
+    parser.add_argument(
+        '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
+    )
 
     args = parser.parse_args()
 
@@ -23,9 +30,18 @@ def main() -> None:
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    product_file = process_mintpy(
-        greeting=args.greeting,
-    )
+    username = os.getenv('EARTHDATA_USERNAME')
+    password = os.getenv('EARTHDATA_PASSWORD')
+    if username and password:
+        write_credentials_to_netrc_file(username, password, append=False)
+
+    if not (Path.home() / '.netrc').exists():
+        warnings.warn(
+            'Earthdata credentials must be present as environment variables, or in your netrc.',
+            UserWarning,
+        )
+
+    product_file = process_mintpy(job_name=args.job_name, min_coherence=args.min_coherence)
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
