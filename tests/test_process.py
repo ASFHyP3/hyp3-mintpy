@@ -9,7 +9,24 @@ from hyp3_mintpy import util
 from hyp3_mintpy.process import check_extent, rename_products, set_same_epsg, set_same_frame, write_cfg
 
 
-def test_rename_products():
+def test_rename_products_new():
+    Path('test/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000').mkdir(parents=True)
+    with Path(
+        'test/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000.txt'
+    ).open('w') as test:
+        test.write('S1_000000_IW1_00000000T000000_VV_AAAA-BURST')
+
+    rename_products('test')
+    folder = Path('test/S1_000000_IW1_00000000_00000000_VV_INT80_0000')
+    txt = folder / 'S1_000000_IW1_00000000_00000000_VV_INT80_0000.txt'
+
+    assert folder.is_dir()
+    assert txt.exists()
+
+    subprocess.call('rm -rf test', shell=True)
+
+
+def test_rename_products_old():
     Path('test/S1A_000_W000_0_N00_0_E000_0_N00_0_00000000_00000000_VV_INT80_0000').mkdir(parents=True)
     with Path(
         'test/S1A_000_W000_0_N00_0_E000_0_N00_0_00000000_00000000_VV_INT80_0000/S1A_000_W000_0_N00_0_E000_0_N00_0_00000000_00000000_VV_INT80_0000.txt'
