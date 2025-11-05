@@ -8,6 +8,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.0]
 
+### Changed
+- Updated `rename_products` function for recent changes in the name of multiburst products.
+
+## [1.0.0]
+
 ### Added
 - Initial workflow to run MintPy with basic settings.
 
