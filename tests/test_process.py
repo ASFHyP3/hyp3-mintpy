@@ -10,9 +10,9 @@ from hyp3_mintpy.process import check_extent, rename_products, set_same_epsg, se
 
 
 def test_rename_products_new():
-    Path('test/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000').mkdir(parents=True)
+    Path('test/S1_000_000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000').mkdir(parents=True)
     with Path(
-        'test/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000/S1_000-000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000.txt'
+        'test/S1_000_000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000/S1_000_000000s0n00-000000s0n00-000000s0n00_IW_00000000_00000000_VV_INT80_0000.txt'
     ).open('w') as test:
         test.write('S1_000000_IW1_00000000T000000_VV_AAAA-BURST')
 
