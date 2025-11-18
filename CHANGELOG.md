@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - Added a new parameter `--prefix` to pull products from the `volcsarvatory-data-test` bucket.
+- Added time interval parameters `--start-date` and `--end-date` discarding products out of the time interval.
 
 ## [1.0.1]
 
