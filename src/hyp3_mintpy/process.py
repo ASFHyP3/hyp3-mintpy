@@ -1,11 +1,15 @@
 """mintpy processing."""
 
+import datetime as dt
 import logging
 import os
 import shutil
 import subprocess
+import warnings
 from pathlib import Path
 
+import boto3
+import botocore
 import geopandas as gpd
 import hyp3_sdk as sdk
 import opensarlab_lib as osl
@@ -56,11 +60,15 @@ def rename_products(folder: str) -> None:
     os.chdir(cwd)
 
 
-def download_pairs(job_name: str, folder: str | None = None) -> None:
+def download_job_pairs(
+    job_name: str, start: str | None = None, end: str | None = None, folder: str | None = None
+) -> str:
     """Downloads HyP3 products and renames files to meet MintPy standards.
 
     Args:
         job_name: Name of the HyP3 project.
+        start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
+        end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
         folder: Folder name that will contain the downloaded products. If None it will create a folder with the project name.
     """
     hyp3 = sdk.HyP3()
@@ -73,10 +81,68 @@ def download_pairs(job_name: str, folder: str | None = None) -> None:
 
     file_list = jobs.download_files(Path(folder))
     for z in file_list:
-        shutil.unpack_archive(str(z), folder)
+        if check_product(z.name, start, end):
+            shutil.unpack_archive(str(z), folder)
         z.unlink()
 
     rename_products(folder)
+
+    return folder
+
+
+def download_bucket_pairs(
+    key: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    path: str = 'multiburst_products/',
+    bucket: str = 'volcsarvatory-data-test',
+) -> str:
+    """Downloads multiburst products from bucket and renames files to meet MintPy standards.
+
+    Args:
+        key: Folder name that contains the multiburst product.
+        start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
+        end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
+        path: Additional prefix to the products.
+        bucket: Name of the bucket.
+    """
+    s3 = boto3.resource('s3', config=boto3.session.Config(signature_version=botocore.UNSIGNED))
+    buck = s3.Bucket(bucket)
+    folder = str(key).split('/')[-1]
+    Path.mkdir(Path(folder))
+    for s3_object in tqdm(buck.objects.filter(Prefix=f'{path}{key}')):
+        path, filename = os.path.split(s3_object.key)
+        if check_product(filename, start, end):
+            buck.download_file(s3_object.key, f'{folder}/{filename}')
+            z = Path(f'{folder}/{filename}')
+            shutil.unpack_archive(str(z), folder)
+            z.unlink()
+    rename_products(folder)
+
+    return folder
+
+
+def check_product(filename: str, start: str | None = None, end: str | None = None) -> bool:
+    """Check if products are within a given time interval.
+
+    Args:
+        filename: Product name.
+        start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
+        end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
+    """
+    date1 = dt.datetime.strptime(filename.split('_')[4], '%Y%m%d')
+    date2 = dt.datetime.strptime(filename.split('_')[5], '%Y%m%d')
+    cond1 = True
+    cond2 = True
+    if start is not None:
+        start_date = dt.datetime.strptime(start, '%Y-%m-%d')
+        cond1 = date1 >= start_date and date2 >= start_date
+
+    if end is not None:
+        end_date = dt.datetime.strptime(end, '%Y-%m-%d')
+        cond2 = date1 <= end_date and date2 <= end_date
+
+    return cond1 and cond2
 
 
 def set_same_epsg(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -193,11 +259,11 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
             gdal.Warp(str(pth), str(pth), dstSRS='EPSG:4326')
 
 
-def write_cfg(job_name: str, min_coherence: str) -> None:
+def write_cfg(output_name: str, min_coherence: str) -> None:
     """Creates a basic config file from a template.
 
     Args:
-        job_name: Name of the HyP3 project.
+        output_name: Name of the HyP3 project.
         min_coherence: Minimum coherence for timeseries processing.
     """
     cfg_folder = Path(hyp3_mintpy.__file__).parent / 'schemas'
@@ -205,9 +271,9 @@ def write_cfg(job_name: str, min_coherence: str) -> None:
     with Path(f'{cfg_folder}/config.txt').open() as cfg:
         lines = cfg.readlines()
 
-    abspath = Path(job_name).resolve()
-    Path(f'{job_name}/MintPy').mkdir(parents=True)
-    with Path(f'{job_name}/MintPy/{job_name}.txt').open('w') as cfg:
+    abspath = Path(output_name).resolve()
+    Path(f'{output_name}/MintPy').mkdir(parents=True)
+    with Path(f'{output_name}/MintPy/{output_name}.txt').open('w') as cfg:
         for line in lines:
             newstring = ''
             if 'folder' in line:
@@ -219,39 +285,54 @@ def write_cfg(job_name: str, min_coherence: str) -> None:
             cfg.write(newstring)
 
 
-def run_mintpy(job_name: str) -> Path:
+def run_mintpy(output_name: str) -> Path:
     """Calls mintpy and prepares a zip file with the outputs.
 
     Args:
-        job_name: Name of the HyP3 project.
+        output_name: Name of the HyP3 project.
 
     Returns:
         Path for the output zip file.
     """
-    subprocess.call(f'smallbaselineApp.py {job_name}/MintPy/{job_name}.txt --work-dir {job_name}/MintPy', shell=True)
-    subprocess.call(f'mv {job_name}/MintPy/*.h5 {job_name}/', shell=True)
-    subprocess.call(f'mv {job_name}/MintPy/inputs/geometry*.h5 {job_name}/', shell=True)
-    subprocess.call(f'mv {job_name}/MintPy/*.txt {job_name}/', shell=True)
-    subprocess.call(f'rm -rf {job_name}/MintPy {job_name}/S1_* {job_name}/shape_*', shell=True)
-    output_zip = shutil.make_archive(base_name=job_name, format='zip', base_dir=job_name)
+    subprocess.call(
+        f'smallbaselineApp.py {output_name}/MintPy/{output_name}.txt --work-dir {output_name}/MintPy', shell=True
+    )
+    subprocess.call(f'mv {output_name}/MintPy/*.h5 {output_name}/', shell=True)
+    subprocess.call(f'mv {output_name}/MintPy/inputs/geometry*.h5 {output_name}/', shell=True)
+    subprocess.call(f'mv {output_name}/MintPy/*.txt {output_name}/', shell=True)
+    subprocess.call(f'rm -rf {output_name}/MintPy {output_name}/S1_* {output_name}/shape_*', shell=True)
+    output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 
     return Path(output_zip)
 
 
-def process_mintpy(job_name: str, min_coherence: float) -> Path:
+def process_mintpy(
+    job_name: str | None, prefix: str | None, min_coherence: float, start: str | None = None, end: str | None = None
+) -> Path:
     """Create a greeting product.
 
     Args:
         job_name: Name of the HyP3 project.
+        prefix: Folder that contains multiburst products.
         min_coherence: Minimum coherence for timeseries processing.
+        start: Start date for the timeseries
+        end: End date for the timeseries
 
     Returns:
         Path for the output zip file.
     """
-    download_pairs(job_name)
-    set_same_frame(job_name, wgs84=True)
+    if job_name is None and prefix is None:
+        raise ValueError('You should give a job name or a bucket to pull the data from')
+    elif job_name is not None and prefix is not None:
+        warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
 
-    write_cfg(job_name, str(min_coherence))
+    if job_name is not None:
+        output_name = download_job_pairs(job_name, start, end)
+    else:
+        output_name = download_bucket_pairs(prefix, start, end)
+    set_same_frame(output_name, wgs84=True)
 
-    product_file = run_mintpy(job_name)
+    write_cfg(output_name, str(min_coherence))
+
+    product_file = run_mintpy(output_name)
     return product_file

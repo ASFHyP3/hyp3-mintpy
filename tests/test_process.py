@@ -6,7 +6,7 @@ import opensarlab_lib as osl
 import pytest
 
 from hyp3_mintpy import util
-from hyp3_mintpy.process import check_extent, rename_products, set_same_epsg, set_same_frame, write_cfg
+from hyp3_mintpy.process import check_extent, check_product, rename_products, set_same_epsg, set_same_frame, write_cfg
 
 
 def test_rename_products_new():
@@ -113,3 +113,16 @@ def test_write_cfg():
     assert minCoh == float(min_coherence)
 
     subprocess.call(f'rm -rf {job_name}', shell=True)
+
+
+def test_check_product():
+    filename = 'S1_064_000000s1n00-136231s2n02-000000s3n00_IW_20200604_20200616_VV_INT80_0000.zip'
+
+    assert check_product(filename, None, None)
+    assert not check_product(filename, '2021-01-01', None)
+    assert check_product(filename, '2019-01-01', None)
+    assert check_product(filename, None, '2021-01-01')
+    assert not check_product(filename, None, '2019-01-01')
+    assert check_product(filename, '2019-01-01', '2021-01-01')
+    assert not check_product(filename, '2019-01-01', '2020-06-10')
+    assert not check_product(filename, '2020-06-10', '2021-01-01')
