@@ -19,10 +19,15 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--job-name', help='The name of the HyP3 job', required=True)
+    parser.add_argument('--job-name', help='The name of the HyP3 job', required=False)
+    parser.add_argument(
+        '--prefix', help='Folder that contains multiburst products in the volcsarvatory bucket', required=False
+    )
     parser.add_argument(
         '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
     )
+    parser.add_argument('--start-date', type=str, help='Start date for the timeseries (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=str, help='End date for the timeseries (YYYY-MM-DD)')
 
     args = parser.parse_args()
 
@@ -41,7 +46,13 @@ def main() -> None:
             UserWarning,
         )
 
-    product_file = process_mintpy(job_name=args.job_name, min_coherence=args.min_coherence)
+    product_file = process_mintpy(
+        job_name=args.job_name,
+        prefix=args.prefix,
+        min_coherence=args.min_coherence,
+        start=args.start_date,
+        end=args.end_date,
+    )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
