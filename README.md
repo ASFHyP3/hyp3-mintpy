@@ -8,11 +8,15 @@ The `hyp3_mintpy` command line tool can be run using the following structure:
 python -m hyp3_mintpy \
   --job-name Okmok_44 \
   --min-coherence 0.1 \
+  --start-date 2019-01-01 \
+  --end-date 2021-01-01
 ```
 Where:
 
 * `--job-name` is the multiburst project name name in HyP3
 * `--min-coherence` is the minimum coherence for the timeseries inversion
+* `--start-date` start date for the timeseries (will discard products before this date)
+* `--end-date` end date for the timeseries (will discard products after this date)
 
 > [!IMPORTANT]
 > Earthdata credentials are necessary to access HyP3 data. See the Credentials section for more information.
