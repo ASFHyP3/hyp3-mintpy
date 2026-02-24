@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0]
+
+### Added
+- Added new parameters `--publish-bucket` and `--publish-prefix` to upload products to s3 bucket.
+- Added parameter `--input-bucket` to pull multiburst products from an specific s3 bucket.
+
+### Changed
+- Renamed `--prefix` parameter to `--input-prefix` to pull product from an specific s3 prefix.
+
 ## [1.1.0]
 
 ### Added
