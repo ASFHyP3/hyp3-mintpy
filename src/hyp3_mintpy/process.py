@@ -306,7 +306,7 @@ def run_mintpy(output_name: str) -> Path:
 
 
 def process_mintpy(
-    job_name: str | None,
+    project_name: str | None,
     input_bucket: str | None,
     input_prefix: str | None,
     min_coherence: float,
@@ -316,7 +316,7 @@ def process_mintpy(
     """Create a greeting product.
 
     Args:
-        job_name: Name of the HyP3 project.
+        project_name: Name of the HyP3 project.
         input_bucket: Bucket that contains multiburst products.
         input_prefix: Folder that contains multiburst products.
         min_coherence: Minimum coherence for timeseries processing.
@@ -326,13 +326,13 @@ def process_mintpy(
     Returns:
         Path for the output zip file.
     """
-    if job_name is None and (input_bucket is None or input_prefix is None):
-        raise ValueError('You should give a job name or a bucekt and a prefix to pull the data')
-    elif job_name is not None and input_prefix is not None:
+    if project_name is None and (input_bucket is None or input_prefix is None):
+        raise ValueError('You should give a project name or a bucekt and a prefix to pull the data')
+    elif project_name is not None and input_prefix is not None:
         warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
 
-    if job_name is not None:
-        output_name = download_job_pairs(job_name, start, end)
+    if project_name is not None:
+        output_name = download_job_pairs(project_name, start, end)
     else:
         if input_prefix is None:
             input_prefix = ''
