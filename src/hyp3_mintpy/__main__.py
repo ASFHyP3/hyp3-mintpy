@@ -20,10 +20,7 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--job-name', help='The name of the HyP3 job', required=False)
-    parser.add_argument('--input-bucket', help='Bucket with multiburst products', required=False)
-    parser.add_argument('--input-prefix', help='Prefix that contains multiburst products', required=False)
-
+    parser.add_argument('--job-name', type=str, help='The name of the HyP3 job', required=False)
     parser.add_argument('--start-date', type=str, help='Start date for the timeseries (YYYY-MM-DD)')
     parser.add_argument('--end-date', type=str, help='End date for the timeseries (YYYY-MM-DD)')
     parser.add_argument(
@@ -35,6 +32,12 @@ def main() -> None:
         default=None,
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
         'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+    parser.add_argument(
+        '--input-prefix',
+        type=str,
+        default=None,
+        help='Prefix to pull the products from the publish bucket',
     )
     parser.add_argument(
         '--publish-prefix',
@@ -62,7 +65,7 @@ def main() -> None:
 
     product_file = process_mintpy(
         job_name=args.job_name,
-        input_bucket=args.input_bucket,
+        input_bucket=args.publish_bucket,
         input_prefix=args.input_prefix,
         min_coherence=args.min_coherence,
         start=args.start_date,

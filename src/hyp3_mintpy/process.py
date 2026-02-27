@@ -326,9 +326,9 @@ def process_mintpy(
     Returns:
         Path for the output zip file.
     """
-    if job_name is None and input_bucket is None:
-        raise ValueError('You should give a job name or a bucket to pull the data from')
-    elif job_name is not None and input_bucket is not None:
+    if job_name is None and (input_bucket is None or input_prefix is None):
+        raise ValueError('You should give a job name or a bucekt and a prefix to pull the data')
+    elif job_name is not None and input_prefix is not None:
         warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
 
     if job_name is not None:
