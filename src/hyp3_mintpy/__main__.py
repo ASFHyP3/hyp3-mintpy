@@ -20,7 +20,7 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--project-name', type=str, help='The name of the HyP3 job', required=False)
+    parser.add_argument('--project-name', type=str, help='The name of the HyP3 project', required=False)
     parser.add_argument('--start-date', type=str, help='Start date for the timeseries (YYYY-MM-DD)')
     parser.add_argument('--end-date', type=str, help='End date for the timeseries (YYYY-MM-DD)')
     parser.add_argument(
