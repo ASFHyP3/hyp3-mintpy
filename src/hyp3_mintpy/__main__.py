@@ -27,17 +27,23 @@ def main() -> None:
         '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
     )
     parser.add_argument(
-        '--publish-bucket',
+        '--input-bucket',
         type=str,
         default=None,
-        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
-        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+        help='Bucket to pull multiburst products',
     )
     parser.add_argument(
         '--input-prefix',
         type=str,
         default=None,
         help='Prefix to pull the products from the publish bucket',
+    )
+    parser.add_argument(
+        '--publish-bucket',
+        type=str,
+        default=None,
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
     )
     parser.add_argument(
         '--publish-prefix',
@@ -65,7 +71,7 @@ def main() -> None:
 
     product_file = process_mintpy(
         project_name=args.project_name,
-        input_bucket=args.publish_bucket,
+        input_bucket=args.input_bucket,
         input_prefix=args.input_prefix,
         min_coherence=args.min_coherence,
         start=args.start_date,
