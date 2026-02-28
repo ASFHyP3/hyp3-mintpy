@@ -91,26 +91,25 @@ def download_job_pairs(
 
 
 def download_bucket_pairs(
-    key: str | None = None,
+    bucket: str,
+    key: str = '',
     start: str | None = None,
     end: str | None = None,
-    path: str = 'multiburst_products/',
-    bucket: str = 'volcsarvatory-data-test',
 ) -> str:
     """Downloads multiburst products from bucket and renames files to meet MintPy standards.
 
     Args:
+        bucket: Name of the bucket.
         key: Folder name that contains the multiburst product.
         start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
         end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
         path: Additional prefix to the products.
-        bucket: Name of the bucket.
     """
     s3 = boto3.resource('s3', config=boto3.session.Config(signature_version=botocore.UNSIGNED))
     buck = s3.Bucket(bucket)
-    folder = str(key).split('/')[-1]
+    folder = f'{str(key).split("/")[-1]}'
     Path.mkdir(Path(folder))
-    for s3_object in tqdm(buck.objects.filter(Prefix=f'{path}{key}')):
+    for s3_object in tqdm(buck.objects.filter(Prefix=f'{key}')):
         path, filename = os.path.split(s3_object.key)
         if check_product(filename, start, end):
             buck.download_file(s3_object.key, f'{folder}/{filename}')
@@ -307,13 +306,19 @@ def run_mintpy(output_name: str) -> Path:
 
 
 def process_mintpy(
-    job_name: str | None, prefix: str | None, min_coherence: float, start: str | None = None, end: str | None = None
+    project_name: str | None,
+    input_bucket: str | None,
+    input_prefix: str | None,
+    min_coherence: float,
+    start: str | None = None,
+    end: str | None = None,
 ) -> Path:
     """Create a greeting product.
 
     Args:
-        job_name: Name of the HyP3 project.
-        prefix: Folder that contains multiburst products.
+        project_name: Name of the HyP3 project.
+        input_bucket: Bucket that contains multiburst products.
+        input_prefix: Folder that contains multiburst products.
         min_coherence: Minimum coherence for timeseries processing.
         start: Start date for the timeseries
         end: End date for the timeseries
@@ -321,15 +326,17 @@ def process_mintpy(
     Returns:
         Path for the output zip file.
     """
-    if job_name is None and prefix is None:
-        raise ValueError('You should give a job name or a bucket to pull the data from')
-    elif job_name is not None and prefix is not None:
+    if project_name is None and (input_bucket is None or input_prefix is None):
+        raise ValueError('You should give a project name or a bucekt and a prefix to pull the data')
+    elif project_name is not None and input_prefix is not None:
         warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
 
-    if job_name is not None:
-        output_name = download_job_pairs(job_name, start, end)
+    if project_name is not None:
+        output_name = download_job_pairs(project_name, start, end)
     else:
-        output_name = download_bucket_pairs(prefix, start, end)
+        if input_prefix is None:
+            input_prefix = ''
+        output_name = download_bucket_pairs(str(input_bucket), input_prefix, start, end)
     set_same_frame(output_name, wgs84=True)
 
     write_cfg(output_name, str(min_coherence))
