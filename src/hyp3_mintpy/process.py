@@ -336,7 +336,7 @@ def process_mintpy(
             input_prefix = ''
         output_name = download_bucket_pairs(str(input_bucket), input_prefix, start, end)
     else:
-        output_name = download_job_pairs(project_name, start, end)
+        output_name = download_job_pairs(str(project_name), start, end)
 
     set_same_frame(output_name, wgs84=True)
 
