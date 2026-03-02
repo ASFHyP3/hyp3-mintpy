@@ -329,7 +329,7 @@ def process_mintpy(
     if project_name is None and (input_bucket is None or input_prefix is None):
         raise ValueError('You should give a project name or a bucekt and a prefix to pull the data')
     elif project_name is not None and input_prefix is not None:
-        warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
+        warnings.warn('Both job name and prefix were given. You should give just one. Using input prefix...')
 
     if input_bucket is not None:
         if input_prefix is None:
