@@ -10,7 +10,7 @@ from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import write_credentials_to_netrc_file
 
 from hyp3_mintpy.process import process_mintpy
-from hyp3_mintpy.util import upload_file_to_s3_with_publish_access_keys
+from hyp3_mintpy.util import nullable_string, upload_file_to_s3_with_publish_access_keys
 
 
 def main() -> None:
@@ -20,34 +20,34 @@ def main() -> None:
     parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
 
     # TODO: Your arguments here
-    parser.add_argument('--project-name', type=str, help='The name of the HyP3 project', required=False)
-    parser.add_argument('--start-date', type=str, help='Start date for the timeseries (YYYY-MM-DD)')
-    parser.add_argument('--end-date', type=str, help='End date for the timeseries (YYYY-MM-DD)')
+    parser.add_argument('--project-name', type=nullable_string, help='The name of the HyP3 project', required=False)
+    parser.add_argument('--start-date', type=nullable_string, help='Start date for the timeseries (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=nullable_string, help='End date for the timeseries (YYYY-MM-DD)')
     parser.add_argument(
         '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
     )
     parser.add_argument(
         '--input-bucket',
-        type=str,
+        type=nullable_string,
         default=None,
         help='Bucket to pull multiburst products',
     )
     parser.add_argument(
         '--input-prefix',
-        type=str,
+        type=nullable_string,
         default=None,
         help='Prefix to pull the products from the publish bucket',
     )
     parser.add_argument(
         '--publish-bucket',
-        type=str,
+        type=nullable_string,
         default=None,
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
         'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
     )
     parser.add_argument(
         '--publish-prefix',
-        type=str,
+        type=nullable_string,
         default=None,
         help='Prefix for the bucket where the products will be published',
     )

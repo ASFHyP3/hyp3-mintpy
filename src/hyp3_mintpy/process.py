@@ -329,14 +329,15 @@ def process_mintpy(
     if project_name is None and (input_bucket is None or input_prefix is None):
         raise ValueError('You should give a project name or a bucekt and a prefix to pull the data')
     elif project_name is not None and input_prefix is not None:
-        warnings.warn('Both job name and prefix were given. You should give just one. Using job name...')
+        warnings.warn('Both job name and prefix were given. You should give just one. Using input prefix...')
 
-    if project_name is not None:
-        output_name = download_job_pairs(project_name, start, end)
-    else:
+    if input_bucket is not None:
         if input_prefix is None:
             input_prefix = ''
         output_name = download_bucket_pairs(str(input_bucket), input_prefix, start, end)
+    else:
+        output_name = download_job_pairs(str(project_name), start, end)
+
     set_same_frame(output_name, wgs84=True)
 
     write_cfg(output_name, str(min_coherence))
