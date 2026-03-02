@@ -284,6 +284,18 @@ def save_shapefile(
     ds = layer = feat = None
 
 
+def nullable_string(argument_string: str) -> str | None:
+    """Identify if string is None.
+
+    Takes:
+    argument_string: Input string.
+
+    Returns: None if input string is 'None' else input string
+    """
+    argument_string = argument_string.replace('None', '').strip()
+    return argument_string if argument_string else None
+
+
 def upload_file_to_s3_with_publish_access_keys(
     path_to_file: Path, bucket: str, prefix: str = '', s3_name: str | None = None
 ) -> None:
