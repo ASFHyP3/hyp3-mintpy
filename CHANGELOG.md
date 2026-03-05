@@ -14,7 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - Renamed `--prefix` parameter to `--input-prefix` to pull product from an specific s3 prefix.
-- Restrict version of numpy<2.4
+- Restricted numpy to <2.4
 
 ## [1.1.0]
 
