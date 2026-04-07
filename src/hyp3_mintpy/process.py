@@ -44,10 +44,12 @@ def rename_products(folder: str) -> None:
         ar = txts[0].open()
         lines = ar.readlines()
         ar.close()
-        if 'nan' in lines[6]:
-            lines[6] = lines[6].replace('nan', '0')
+        nan = any(['Baseline' in line and 'nan' in line for line in lines])
+        if nan:
             ar = txts[0].open('w')
             for line in lines:
+                if 'Baseline' in line and 'nan' in line:
+                    line = line.replace('nan', '0')
                 ar.write(line)
             ar.close()
         burst = lines[0].split('_')[1] + '_' + lines[0].split('_')[2]
