@@ -11,10 +11,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - Added new parameters `--publish-bucket` and `--publish-prefix` to upload products to s3 bucket.
 - Added parameter `--input-bucket` to pull multiburst products from an specific s3 bucket.
+- Added network and coherence plots to the output product.
 
 ### Changed
 - Renamed `--prefix` parameter to `--input-prefix` to pull product from an specific s3 prefix.
 - Restricted numpy to <2.4
+- Changed `rename_products` function to find nan baselines and change them for 0.
 
 ## [1.1.0]
 
