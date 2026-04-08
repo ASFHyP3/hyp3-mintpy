@@ -44,6 +44,14 @@ def rename_products(folder: str) -> None:
         ar = txts[0].open()
         lines = ar.readlines()
         ar.close()
+        nan = any(['Baseline' in line and 'nan' in line for line in lines])
+        if nan:
+            ar = txts[0].open('w')
+            for line in lines:
+                if 'Baseline' in line and 'nan' in line:
+                    line = line.replace('nan', '0')
+                ar.write(line)
+            ar.close()
         burst = lines[0].split('_')[1] + '_' + lines[0].split('_')[2]
         for f in fs:
             name = f.name
@@ -299,6 +307,8 @@ def run_mintpy(output_name: str) -> Path:
     subprocess.call(f'mv {output_name}/MintPy/*.h5 {output_name}/', shell=True)
     subprocess.call(f'mv {output_name}/MintPy/inputs/geometry*.h5 {output_name}/', shell=True)
     subprocess.call(f'mv {output_name}/MintPy/*.txt {output_name}/', shell=True)
+    subprocess.call(f'mv {output_name}/MintPy/*.pdf {output_name}/', shell=True)
+    subprocess.call(f'mv {output_name}/MintPy/*.png {output_name}/', shell=True)
     subprocess.call(f'rm -rf {output_name}/MintPy {output_name}/S1_* {output_name}/shape_*', shell=True)
     output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 
