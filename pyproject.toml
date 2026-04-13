@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=82.0.1", "setuptools_scm[toml]>=10.0.5"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,7 +24,7 @@ classifiers=[
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "hyp3lib>=3,<5",
+    "hyp3lib>=4.0.1,<5",
     # TODO: insert Python dependencies as list here
 ]
 dynamic = ["version"]
