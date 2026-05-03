@@ -297,7 +297,7 @@ def nullable_string(argument_string: str) -> str | None:
 
 
 def check_valid_pixels(image_path: Path) -> bool:
-    """Check if the image has valid pixels
+    """Check if the image has valid pixels.
 
     Takes:
         image: Local image path
@@ -310,8 +310,9 @@ def check_valid_pixels(image_path: Path) -> bool:
         nodata = src.nodata
         valid_mask = ~np.isnan(data) & ~np.isinf(data)
         if nodata is not None:
-            valid_mask &= (data != nodata)
-        has_valid = np.any(valid_mask)
+            valid = data != nodata
+            valid_mask &= valid
+        has_valid = bool(np.any(valid_mask))
     return has_valid
 
 
