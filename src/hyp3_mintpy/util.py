@@ -296,6 +296,26 @@ def nullable_string(argument_string: str) -> str | None:
     return argument_string if argument_string else None
 
 
+def check_valid_pixels(image_path: Path) -> bool:
+    """Check if the image has valid pixels.
+
+    Takes:
+        image: Local image path
+
+    Returns: True if there's at least one valid pixel, False otherwise
+    """
+    has_valid = False
+    with rasterio.open(str(image_path)) as src:
+        data = src.read(1)
+        nodata = src.nodata
+        valid_mask = ~np.isnan(data) & ~np.isinf(data)
+        if nodata is not None:
+            valid = data != nodata
+            valid_mask &= valid
+        has_valid = bool(np.any(valid_mask))
+    return has_valid
+
+
 def upload_file_to_s3_with_publish_access_keys(
     path_to_file: Path, bucket: str, prefix: str = '', s3_name: str | None = None
 ) -> None:
