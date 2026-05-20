@@ -6,10 +6,12 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
+import boto3
 import geopandas as gpd
 import numpy as np
 import rasterio
 import shapely.wkt
+from hyp3lib.aws import get_content_type, get_tag_set
 from mintpy.utils import readfile
 from osgeo import gdal, ogr, osr
 from pyproj import Transformer
@@ -280,3 +282,69 @@ def save_shapefile(
     feat = None
 
     ds = layer = feat = None
+
+
+def nullable_string(argument_string: str) -> str | None:
+    """Identify if string is None.
+
+    Takes:
+    argument_string: Input string.
+
+    Returns: None if input string is 'None' else input string
+    """
+    argument_string = argument_string.replace('None', '').strip()
+    return argument_string if argument_string else None
+
+
+def check_valid_pixels(image_path: Path) -> bool:
+    """Check if the image has valid pixels.
+
+    Takes:
+        image: Local image path
+
+    Returns: True if there's at least one valid pixel, False otherwise
+    """
+    has_valid = False
+    with rasterio.open(str(image_path)) as src:
+        data = src.read(1)
+        nodata = src.nodata
+        valid_mask = ~np.isnan(data) & ~np.isinf(data)
+        if nodata is not None:
+            valid = data != nodata
+            valid_mask &= valid
+        has_valid = bool(np.any(valid_mask))
+    return has_valid
+
+
+def upload_file_to_s3_with_publish_access_keys(
+    path_to_file: Path, bucket: str, prefix: str = '', s3_name: str | None = None
+) -> None:
+    """Uploads file to s3 bucket.
+
+    path_file: Local file path
+    bucket: Bucket name
+    prefix: Bucket prefix
+    s3_name: Name of file in s3 bucekt
+    """
+    try:
+        access_key_id = os.environ['PUBLISH_ACCESS_KEY_ID']
+        access_key_secret = os.environ['PUBLISH_SECRET_ACCESS_KEY']
+    except KeyError:
+        raise ValueError(
+            'Please provide S3 Bucket upload access key credentials via the '
+            'PUBLISH_ACCESS_KEY_ID and PUBLISH_SECRET_ACCESS_KEY environment variables'
+        )
+
+    s3_client = boto3.client('s3', aws_access_key_id=access_key_id, aws_secret_access_key=access_key_secret)
+
+    if s3_name is None:
+        s3_name = path_to_file.name
+    key = str(Path(prefix) / s3_name)
+
+    extra_args = {'ContentType': get_content_type(key)}
+
+    s3_client.upload_file(str(path_to_file), bucket, key, extra_args)
+
+    tag_set = get_tag_set(path_to_file.name)
+
+    s3_client.put_object_tagging(Bucket=bucket, Key=key, Tagging=tag_set)

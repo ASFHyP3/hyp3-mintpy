@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0]
+
+### Added
+- Added new parameters `--publish-bucket` and `--publish-prefix` to upload products to s3 bucket.
+- Added parameter `--input-bucket` to pull multiburst products from an specific s3 bucket.
+- Added network and coherence plots to the output product.
+- Added check for valid pixels on the downloaded pairs, if it does not find any it removes the pair.
+
+### Changed
+- Renamed `--prefix` parameter to `--input-prefix` to pull product from an specific s3 prefix.
+- Restricted numpy to <2.4
+- Changed `rename_products` function to find nan baselines and change them for 0.
+
 ## [1.1.0]
 
 ### Added
