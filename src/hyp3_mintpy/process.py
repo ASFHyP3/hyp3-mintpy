@@ -341,6 +341,7 @@ def run_mintpy(output_name: str) -> Path:
     subprocess.call(f'mv {output_name}/MintPy/*.txt {output_name}/', shell=True)
     subprocess.call(f'mv {output_name}/MintPy/*.pdf {output_name}/', shell=True)
     subprocess.call(f'mv {output_name}/MintPy/*.png {output_name}/', shell=True)
+    subprocess.call(f'mv {output_name}/MintPy/pic/* {output_name}/', shell=True)
     subprocess.call(f'rm -rf {output_name}/MintPy {output_name}/S1_* {output_name}/shape_*', shell=True)
     output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 
