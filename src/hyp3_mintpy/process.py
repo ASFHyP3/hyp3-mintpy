@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import warnings
+from collections import Counter
 from pathlib import Path
 
 import boto3
@@ -106,6 +107,7 @@ def download_bucket_pairs(
     key: str = '',
     start: str | None = None,
     end: str | None = None,
+    filter_name: bool = True,
 ) -> str:
     """Downloads multiburst products from bucket and renames files to meet MintPy standards.
 
@@ -115,12 +117,17 @@ def download_bucket_pairs(
         start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
         end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
         path: Additional prefix to the products.
+        filter_name: Filter multiburst products by the most common multiburst set.
     """
     s3 = boto3.resource('s3', config=boto3.session.Config(signature_version=botocore.UNSIGNED))
     buck = s3.Bucket(bucket)
     folder = f'{str(key).split("/")[-1]}'
     Path.mkdir(Path(folder))
-    for s3_object in tqdm(buck.objects.filter(Prefix=f'{key}')):
+    if 'multiburst_products' in key:
+        objs = filter_products(bucket, key)
+    else:
+        objs = buck.objects.filter(Prefix=f'{key}')
+    for s3_object in tqdm(objs):
         path, filename = os.path.split(s3_object.key)
         if check_product(filename, start, end):
             buck.download_file(s3_object.key, f'{folder}/{filename}')
@@ -133,6 +140,25 @@ def download_bucket_pairs(
     rename_products(folder)
 
     return folder
+
+
+def filter_products(bucket: str, key: str = '') -> list:
+    """Downloads multiburst products from bucket and renames files to meet MintPy standards.
+
+    Args:
+        bucket: Name of the bucket.
+        key: Folder name that contains the multiburst product.
+    """
+    s3 = boto3.resource('s3', config=boto3.session.Config(signature_version=botocore.UNSIGNED))
+    buck = s3.Bucket(bucket)
+    objs = [obj.key.split('/')[-1].split('_IW_')[0] for obj in buck.objects.filter(Prefix=f'{key}')]
+    counter = Counter(objs)
+    most_frequent = counter.most_common(1)[0][0]
+    filter_objs = [
+        obj for obj in buck.objects.filter(Prefix=f'{key}') if most_frequent in obj.key.split('/')[-1].split('_IW_')[0]
+    ]
+
+    return filter_objs
 
 
 def check_product(filename: str, start: str | None = None, end: str | None = None) -> bool:

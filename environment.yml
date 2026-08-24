@@ -1,4 +1,4 @@
-name: hyp3-mintpy
+name: hyp3-mintpy-test
 channels:
   - conda-forge
   - nodefaults
