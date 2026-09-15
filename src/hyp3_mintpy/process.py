@@ -94,7 +94,7 @@ def download_job_pairs(
         if check_product(z.name, start, end):
             shutil.unpack_archive(str(z), folder)
             wphases = Path(folder).glob('**/*_wrapped_phase.tif')
-            wphase = wphases[0]
+            wphase = next(iter(wphases))
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
         z.unlink()
@@ -136,7 +136,7 @@ def download_bucket_pairs(
             z = Path(f'{folder}/{filename}')
             shutil.unpack_archive(str(z), folder)
             wphases = Path(folder).glob('**/*_wrapped_phase.tif')
-            wphase = wphases[0]
+            wphase = next(iter(wphases))
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
             z.unlink()
