@@ -93,7 +93,7 @@ def download_job_pairs(
     for z in file_list:
         if check_product(z.name, start, end):
             shutil.unpack_archive(str(z), folder)
-            wphase = Path(folder).glob('**/*_wrapped_phase.tif')[0]
+            wphase = list(Path(folder).glob('**/*_wrapped_phase.tif'))[0]
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
         z.unlink()
@@ -134,7 +134,7 @@ def download_bucket_pairs(
             buck.download_file(s3_object.key, f'{folder}/{filename}')
             z = Path(f'{folder}/{filename}')
             shutil.unpack_archive(str(z), folder)
-            wphase = Path(folder).glob('**/*_wrapped_phase.tif')[0]
+            wphase = list(Path(folder).glob('**/*_wrapped_phase.tif'))[0]
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
             z.unlink()

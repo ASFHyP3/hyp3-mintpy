@@ -11,7 +11,7 @@ import requests
 import utm
 
 
-def change_reference_vel(h5file: str, ref_coords: tuple[float, float]) -> None:
+def change_reference_vel(h5file: str, ref_coords: list[float]) -> None:
     """Change the reference pixel on the timeseries.
 
     Args:
@@ -38,7 +38,7 @@ def change_reference_vel(h5file: str, ref_coords: tuple[float, float]) -> None:
     h5f.close()
 
 
-def change_reference_ts(h5file: str, ref_coords: tuple[float, float]) -> None:
+def change_reference_ts(h5file: str, ref_coords: list[float]) -> None:
     """Change the reference pixel on the timeseries.
 
     Args:
@@ -68,7 +68,7 @@ def change_reference_ts(h5file: str, ref_coords: tuple[float, float]) -> None:
     h5f.close()
 
 
-def get_pixel_ts(h5file: str, coords: tuple[float, float]) -> np.ndarray:
+def get_pixel_ts(h5file: str, coords: list[float]) -> np.ndarray:
     """Get the time series for a pixel.
 
     Args:
@@ -102,7 +102,7 @@ def get_vel(df: pd.DataFrame) -> dict:
     Returns:
         vel: Dictionary with the velocities per year on each component
     """
-    vel = {}
+    vel: dict[str, dict] = {}
 
     x = df['yyyy.yyyy']
     y = df['__east(m)']
@@ -273,7 +273,7 @@ def reference_timeseries(timeseries: str, coherence: str, stations: list, lons_g
     return ref_sta, ref_lon, ref_lat
 
 
-def plot_comparison(timeseries: str, coherence: str, geometry: str) -> None:
+def plot_comparison(timeseries: str, coherence: str, geometry: str) -> tuple[str, float, float]:
     """Plot comparison of time series between the GPS stations projected into the line of sight and the InSAR time series.
 
     Args:
@@ -283,8 +283,8 @@ def plot_comparison(timeseries: str, coherence: str, geometry: str) -> None:
     """
     stations, lons_gps, lats_gps, az_gps, inc_gps = find_stations(timeseries, coherence, geometry)
     if len(stations) == 0:
-        print('No GPS stations found')
-        return
+        raise ValueError('No GPS stations found')
+
     ref_sta, ref_lon, ref_lat = reference_timeseries(timeseries, coherence, stations, lons_gps, lats_gps)
     with h5py.File(timeseries, 'r') as f:
         ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
