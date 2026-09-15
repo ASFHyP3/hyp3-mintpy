@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import pandas as pd
 from pathlib import Path
 
@@ -18,7 +16,7 @@ def test_find_reference_station():
 
 def test_get_vel():
     current_dir = Path(__file__).parent.resolve()
-    test =  current_dir / 'data/test_gps.pkl'
+    test = current_dir / 'data/test_gps.pkl'
     df = pd.read_pickle(test)
     vel = gps.get_vel(df)
     assert round(float(vel['east']['m']), 6) == round(-0.005291043406543734, 6)

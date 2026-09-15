@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """mintpy processing."""
 
 import datetime as dt

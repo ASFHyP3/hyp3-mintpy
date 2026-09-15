@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """module for gps projection."""
 
 import io
