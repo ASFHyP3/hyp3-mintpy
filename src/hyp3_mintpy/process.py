@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """mintpy processing."""
 
 import datetime as dt
@@ -7,6 +8,7 @@ import shutil
 import subprocess
 import warnings
 from collections import Counter
+from datetime import timezone
 from pathlib import Path
 
 import boto3
@@ -19,7 +21,7 @@ from osgeo import gdal
 from tqdm.auto import tqdm
 
 import hyp3_mintpy
-from hyp3_mintpy import util
+from hyp3_mintpy import gps, util
 
 
 log = logging.getLogger(__name__)
@@ -45,7 +47,7 @@ def rename_products(folder: str) -> None:
         ar = txts[0].open()
         lines = ar.readlines()
         ar.close()
-        nan = any(['Baseline' in line and 'nan' in line for line in lines])
+        nan = any('Baseline' in line and 'nan' in line for line in lines)
         if nan:
             ar = txts[0].open('w')
             for line in lines:
@@ -92,7 +94,7 @@ def download_job_pairs(
     for z in file_list:
         if check_product(z.name, start, end):
             shutil.unpack_archive(str(z), folder)
-            wphase = list(Path(folder).glob('**/*_wrapped_phase.tif'))[0]
+            wphase = Path(folder).glob('**/*_wrapped_phase.tif')[0]
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
         z.unlink()
@@ -128,12 +130,12 @@ def download_bucket_pairs(
     else:
         objs = buck.objects.filter(Prefix=f'{key}')
     for s3_object in tqdm(objs):
-        path, filename = os.path.split(s3_object.key)
+        _, filename = os.path.split(s3_object.key)
         if check_product(filename, start, end):
             buck.download_file(s3_object.key, f'{folder}/{filename}')
             z = Path(f'{folder}/{filename}')
             shutil.unpack_archive(str(z), folder)
-            wphase = list(Path(folder).glob('**/*_wrapped_phase.tif'))[0]
+            wphase = Path(folder).glob('**/*_wrapped_phase.tif')[0]
             if not util.check_valid_pixels(wphase):
                 shutil.rmtree('/'.join(str(wphase).split('/')[0:-1]))
             z.unlink()
@@ -169,16 +171,16 @@ def check_product(filename: str, start: str | None = None, end: str | None = Non
         start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
         end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
     """
-    date1 = dt.datetime.strptime(filename.split('_')[4], '%Y%m%d')
-    date2 = dt.datetime.strptime(filename.split('_')[5], '%Y%m%d')
+    date1 = dt.datetime.strptime(filename.split('_')[4], '%Y%m%d').replace(tzinfo=timezone.utc)
+    date2 = dt.datetime.strptime(filename.split('_')[5], '%Y%m%d').replace(tzinfo=timezone.utc)
     cond1 = True
     cond2 = True
     if start is not None:
-        start_date = dt.datetime.strptime(start, '%Y-%m-%d')
+        start_date = dt.datetime.strptime(start, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         cond1 = date1 >= start_date and date2 >= start_date
 
     if end is not None:
-        end_date = dt.datetime.strptime(end, '%Y-%m-%d')
+        end_date = dt.datetime.strptime(end, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         cond2 = date1 <= end_date and date2 <= end_date
 
     return cond1 and cond2
@@ -243,7 +245,7 @@ def check_extent(gdf: gpd.GeoDataFrame, common_extents: list) -> None:
     wkt_shapely_geom = shapely.wkt.loads(wkt)
     if not util.check_within_bounds(wkt_shapely_geom, gdf):
         print('WKT exceeds bounds of at least one dataset')
-        raise Exception('Error determining area of common coverage')
+        raise RuntimeError('Error determining area of common coverage')
 
 
 def set_same_frame(folder: str, wgs84: bool = False) -> None:
@@ -254,13 +256,13 @@ def set_same_frame(folder: str, wgs84: bool = False) -> None:
         wgs84: If True reprojects all the files to WGS84 system.
     """
     data_path = Path(folder)
-    dem = sorted(list(data_path.glob('*/*dem*.tif')))
-    lv_phi = sorted(list(data_path.glob('*/*lv_phi*.tif')))
-    lv_theta = sorted(list(data_path.glob('*/*lv_theta*.tif')))
-    water_mask = sorted(list(data_path.glob('*/*_water_mask*.tif')))
-    unw = sorted(list(data_path.glob('*/*_unw_phase*.tif')))
-    corr = sorted(list(data_path.glob('*/*_corr*.tif')))
-    conn_comp = sorted(list(data_path.glob('*/*_conncomp*.tif')))
+    dem = sorted(data_path.glob('*/*dem*.tif'))
+    lv_phi = sorted(data_path.glob('*/*lv_phi*.tif'))
+    lv_theta = sorted(data_path.glob('*/*lv_theta*.tif'))
+    water_mask = sorted(data_path.glob('*/*_water_mask*.tif'))
+    unw = sorted(data_path.glob('*/*_unw_phase*.tif'))
+    corr = sorted(data_path.glob('*/*_corr*.tif'))
+    conn_comp = sorted(data_path.glob('*/*_conncomp*.tif'))
     tiff_path = dem + lv_phi + lv_theta + water_mask + unw + corr + conn_comp
 
     gdf = gpd.GeoDataFrame(
@@ -348,9 +350,9 @@ def run_mintpy(output_name: str) -> Path:
     coherence = 'avgSpatialCoh.h5'
     geometry = 'geometryGeo.h5'
     for ts in ts_files:
-        ref_sta, ref_lon, ref_lat = gps.plot_comparison(ts, coherence, geometry)
+        _, ref_lon, ref_lat = gps.plot_comparison(ts, coherence, geometry)
     shutil.copy('velocity.h5', 'velocity_ref.h5')
-    change_reference_vel('velocity_ref.h5', ref_coords = [ref_lon, ref_lat])
+    gps.change_reference_vel('velocity_ref.h5', ref_coords=[ref_lon, ref_lat])
 
     output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 

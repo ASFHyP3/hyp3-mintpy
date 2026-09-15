@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """HyP3 plugin for MintPy processing."""
 
 from importlib.metadata import version

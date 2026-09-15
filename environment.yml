@@ -1,4 +1,4 @@
-name: hyp3-mintpy-gps
+name: hyp3-mintpy
 channels:
   - conda-forge
   - nodefaults
@@ -16,6 +16,7 @@ dependencies:
   - hyp3_sdk
   - mintpy
   - numpy<2.4
+  - pyarrow
   - rasterio
   # TODO: insert conda-forge dependencies as list here
   - pip:

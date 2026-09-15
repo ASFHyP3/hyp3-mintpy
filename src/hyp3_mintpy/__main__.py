@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """mintpy processing for HyP3."""
 
 import logging
