@@ -347,13 +347,14 @@ def run_mintpy(output_name: str) -> Path:
     subprocess.call(f'mv {output_name}/MintPy/pic/* {output_name}/', shell=True)
     subprocess.call(f'rm -rf {output_name}/MintPy {output_name}/S1_* {output_name}/shape_*', shell=True)
 
-    ts_files = ['timeseries.h5', 'timeseries_demErr.h5']
-    coherence = 'avgSpatialCoh.h5'
-    geometry = 'geometryGeo.h5'
+    ts_files = [f'{output_name}/timeseries.h5', f'{output_name}/timeseries_demErr.h5']
+    coherence = f'{output_name}/avgSpatialCoh.h5'
+    geometry = f'{output_name}/geometryGeo.h5'
     for ts in ts_files:
+        shutil.copy(ts, f'{ts.split(".h5")[0]}_ref.h5')
         _, ref_lon, ref_lat = gps.plot_comparison(ts, coherence, geometry)
-    shutil.copy('velocity.h5', 'velocity_ref.h5')
-    gps.change_reference_vel('velocity_ref.h5', ref_coords=[ref_lon, ref_lat])
+    shutil.copy(f'{output_name}/velocity.h5', f'{output_name}/velocity_ref.h5')
+    gps.change_reference_vel(f'{output_name}/velocity_ref.h5', ref_coords=[ref_lon, ref_lat])
 
     output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 

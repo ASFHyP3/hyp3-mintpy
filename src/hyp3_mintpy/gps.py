@@ -2,6 +2,7 @@
 
 import io
 from datetime import datetime, timezone
+from pathlib import Path
 
 import h5py
 import matplotlib.pyplot as plt
@@ -151,7 +152,7 @@ def download_station_file(station_id: str, start: datetime | None = None, end: d
 
     df['YYMMMDD'] = pd.to_datetime(df['YYMMMDD'], format='%y%b%d')
     if start is not None and end is not None:
-        df = df[(df['YYMMMDD'] <= end) & (df['YYMMMDD'] >= start)]
+        df = df[(df['YYMMMDD'].dt.date <= end.date()) & (df['YYMMMDD'].dt.date >= start.date())]
         df['__east(m)'] = df['__east(m)'] - df['__east(m)'].iloc[0]
         df['_north(m)'] = df['_north(m)'] - df['_north(m)'].iloc[0]
         df['____up(m)'] = df['____up(m)'] - df['____up(m)'].iloc[0]
@@ -195,7 +196,7 @@ def find_stations(timeseries: str, coherence: str, geometry: str) -> tuple:
     with h5py.File(timeseries, 'r') as f:
         ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
         ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
-        df = df[(df['Dtbeg'] <= ts_end) & (df['Dtend'] >= ts_start)]
+        df = df[(df['Dtbeg'].dt.date <= ts_end.date()) & (df['Dtend'].dt.date >= ts_start.date())]
 
     stations = []
     lons_gps = []
@@ -285,13 +286,16 @@ def plot_comparison(timeseries: str, coherence: str, geometry: str) -> tuple[str
     if len(stations) == 0:
         raise ValueError('No GPS stations found')
 
-    ref_sta, ref_lon, ref_lat = reference_timeseries(timeseries, coherence, stations, lons_gps, lats_gps)
     with h5py.File(timeseries, 'r') as f:
         ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
         ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
         dates = f['date'][:]
         dates = [datetime.strptime(date.decode('utf-8'), '%Y%m%d').replace(tzinfo=timezone.utc) for date in dates]
 
+    ts_ref = f'{timeseries.split(".h5")[0]}_ref.h5'
+    ts_path = Path(ts_ref)
+    work_dir = str(ts_path.parent)
+    ref_sta, ref_lon, ref_lat = reference_timeseries(ts_ref, coherence, stations, lons_gps, lats_gps)
     df_ref = download_station_file(ref_sta, start=ts_start, end=ts_end)
     vel_ref = get_vel(df_ref)
     for i, sta in enumerate(stations):
@@ -305,7 +309,6 @@ def plot_comparison(timeseries: str, coherence: str, geometry: str) -> tuple[str
         df_sta['__east(m)'] = df_sta['__east(m)'] - df_sta['__east(m)'].iloc[0]
         df_sta['_north(m)'] = df_sta['_north(m)'] - df_sta['_north(m)'].iloc[0]
         df_sta['____up(m)'] = df_sta['____up(m)'] - df_sta['____up(m)'].iloc[0]
-        ts_ref = f'{timeseries.split(".h5")[0]}_ref.h5'
 
         los_gps = -(
             df_sta['__east(m)'] * np.sin(np.radians(inc_gps[i])) * np.cos(np.radians(90 - az_gps[i]))
@@ -313,11 +316,15 @@ def plot_comparison(timeseries: str, coherence: str, geometry: str) -> tuple[str
             - df_sta['____up(m)'] * np.cos(np.radians(inc_gps[i]))
         )
         los_insar = get_pixel_ts(ts_ref, coords=[lons_gps[i], lats_gps[i]])
+        ts_name = ts_path.name.split('_ref')[0]
         plt.figure()
         plt.title(sta)
         plt.scatter(df_sta['YYMMMDD'], los_gps, label='GPS')
         plt.scatter(dates, los_insar + (np.mean(los_gps) - np.mean(los_insar)), label='InSAR')
+        plt.xticks(rotation=45)
+        plt.xlabel('Date')
+        plt.ylabel('LOS deformation')
         plt.legend()
-        plt.savefig(f'{sta}.png')
+        plt.savefig(f'{work_dir}/{sta}_{ts_name}.png', bbox_inches='tight')
 
     return ref_sta, ref_lon, ref_lat
