@@ -350,11 +350,18 @@ def run_mintpy(output_name: str) -> Path:
     ts_files = [f'{output_name}/timeseries.h5', f'{output_name}/timeseries_demErr.h5']
     coherence = f'{output_name}/avgSpatialCoh.h5'
     geometry = f'{output_name}/geometryGeo.h5'
+    find_gps = False
     for ts in ts_files:
-        shutil.copy(ts, f'{ts.split(".h5")[0]}_ref.h5')
-        _, ref_lon, ref_lat = gps.plot_comparison(ts, coherence, geometry)
-    shutil.copy(f'{output_name}/velocity.h5', f'{output_name}/velocity_ref.h5')
-    gps.change_reference_vel(f'{output_name}/velocity_ref.h5', ref_coords=[ref_lon, ref_lat])
+        if Path(ts).exists():
+            shutil.copy(ts, f'{ts.split(".h5")[0]}_ref.h5')
+            try:
+                _, ref_lon, ref_lat = gps.plot_comparison(ts, coherence, geometry)
+                find_gps = True
+            except ValueError as e:
+                print(e)
+    if find_gps:
+        shutil.copy(f'{output_name}/velocity.h5', f'{output_name}/velocity_ref.h5')
+        gps.change_reference_vel(f'{output_name}/velocity_ref.h5', ref_coords=[ref_lon, ref_lat])
 
     output_zip = shutil.make_archive(base_name=output_name, format='zip', base_dir=output_name)
 
