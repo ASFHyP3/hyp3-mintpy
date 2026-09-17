@@ -3,7 +3,6 @@
 import os
 import re
 from collections import Counter
-from datetime import datetime
 from pathlib import Path
 
 import boto3
@@ -13,7 +12,7 @@ import rasterio
 import shapely.wkt
 from hyp3lib.aws import get_content_type, get_tag_set
 from mintpy.utils import readfile
-from osgeo import gdal, ogr, osr
+from osgeo import gdal, osr
 from pyproj import Transformer
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
@@ -170,7 +169,7 @@ def get_geotiff_bbox(geotiff_path: str | os.PathLike, dst_epsg: str | None = Non
 
     if dst_epsg:
         srs_crs = dataset.crs
-        transformer = Transformer.from_crs(srs_crs, f'EPSG:{str(dst_epsg)}', always_xy=True)
+        transformer = Transformer.from_crs(srs_crs, f'EPSG:{dst_epsg!s}', always_xy=True)
         min_x, min_y = transformer.transform(bounds.left, bounds.bottom)
         max_x, max_y = transformer.transform(bounds.right, bounds.top)
 
@@ -201,7 +200,7 @@ def possible_wgs84_wkt(wkt: str) -> bool:
             print('Detected possible WGS84 (lat/lon) coordinates')
             wgs84 = input('Are these lat/lon coordinates? (y or n)')
             if wgs84 in ['y', 'n']:
-                do_wgs84 = True if wgs84 == 'y' else False
+                do_wgs84 = wgs84 == 'y'
                 return do_wgs84
     else:
         return False
@@ -242,7 +241,8 @@ def get_valid_wkt() -> tuple[str, BaseGeometry]:
 
             return wkt, shapely_geom
         except Exception as e:
-            print(f'Error: {e}. Please enter a valid WKT.')
+            print(f'Error {e}: Please enter a valid WKT.')
+            raise
 
 
 def check_within_bounds(wkt_shapely_geom: BaseGeometry, gdf: gpd.GeoDataFrame) -> bool:
@@ -254,34 +254,6 @@ def check_within_bounds(wkt_shapely_geom: BaseGeometry, gdf: gpd.GeoDataFrame) -
     returns: True if wkt_shapely_geom is contained within all geometries in the GeoDataFrame, else False
     """
     return all(wkt_shapely_geom.within(geom) for geom in gdf['geometry'])
-
-
-def save_shapefile(
-    ogr_geom: ogr.Geometry,
-    epsg: str | int,
-    dst_path: str | os.PathLike | None = Path.cwd() / f'shape_{datetime.strftime(datetime.now(), "%Y%m%dT%H%M%S")}.shp',
-) -> None:
-    """Writes a shapefile from an ogr geometry in a given projection.
-
-    ogr_geom: An ogr geometry
-    epsg: the EPSG projection to apply to the shapefile
-    dst_path: (optional) shapefile destination path
-    """
-    epsg = int(epsg)
-    driver = ogr.GetDriverByName('Esri Shapefile')
-    ds = driver.CreateDataSource(str(dst_path))
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(epsg)
-    layer = ds.CreateLayer('', srs, ogr.wkbPolygon)
-    defn = layer.GetLayerDefn()
-
-    feat = ogr.Feature(defn)
-    feat.SetGeometry(ogr_geom)
-
-    layer.CreateFeature(feat)
-    feat = None
-
-    ds = layer = feat = None
 
 
 def nullable_string(argument_string: str) -> str | None:
