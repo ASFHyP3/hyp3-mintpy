@@ -1,7 +1,7 @@
 """module for gps projection."""
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import h5py
@@ -194,8 +194,8 @@ def find_stations(timeseries: str, coherence: str, geometry: str) -> tuple:
         df = df[(df['Lat(deg)'] >= min(lats)) & (df['Lat(deg)'] <= max(lats))]
 
     with h5py.File(timeseries, 'r') as f:
-        ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
-        ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
+        ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=UTC)
+        ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=UTC)
         df = df[(df['Dtbeg'].dt.date <= ts_end.date()) & (df['Dtend'].dt.date >= ts_start.date())]
 
     stations = []
@@ -287,10 +287,10 @@ def plot_comparison(timeseries: str, coherence: str, geometry: str) -> tuple[str
         raise ValueError('No GPS stations found')
 
     with h5py.File(timeseries, 'r') as f:
-        ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
-        ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=timezone.utc)
+        ts_start = datetime.strptime(f.attrs['START_DATE'], '%Y%m%d').replace(tzinfo=UTC)
+        ts_end = datetime.strptime(f.attrs['END_DATE'], '%Y%m%d').replace(tzinfo=UTC)
         dates = f['date'][:]
-        dates = [datetime.strptime(date.decode('utf-8'), '%Y%m%d').replace(tzinfo=timezone.utc) for date in dates]
+        dates = [datetime.strptime(date.decode('utf-8'), '%Y%m%d').replace(tzinfo=UTC) for date in dates]
 
     ts_ref = f'{timeseries.split(".h5")[0]}_ref.h5'
     ts_path = Path(ts_ref)

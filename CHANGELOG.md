@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Added
+- Added a workflow `opera_ts` to pull OPERA displacement time series.
+
+### Changed
+- The `mintpy.process` workflows was renamed `mintpy.mintpy_ts` to distinguish it from the OPERA displacement time series.
+- The `__main__.py` entrypoint now allows you to select either the `mintpy_ts` (default) or `opera_ts` workflows using the `++process` option.
+
 ## [1.3.0]
 
 ### Added

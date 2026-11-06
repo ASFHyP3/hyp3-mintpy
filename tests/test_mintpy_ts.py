@@ -6,7 +6,7 @@ import opensarlab_lib as osl
 import pytest
 
 from hyp3_mintpy import util
-from hyp3_mintpy.process import check_extent, check_product, rename_products, set_same_epsg, set_same_frame, write_cfg
+from hyp3_mintpy.mintpy_ts import check_extent, check_product, rename_products, set_same_epsg, set_same_frame, write_cfg
 
 
 def test_rename_products_new():
