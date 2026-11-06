@@ -1,98 +1,35 @@
 """mintpy processing for HyP3."""
 
+import argparse
 import logging
-import os
-import warnings
+import sys
 from argparse import ArgumentParser
-from pathlib import Path
-
-from hyp3lib.aws import upload_file_to_s3
-from hyp3lib.fetch import write_credentials_to_netrc_file
-
-from hyp3_mintpy.process import process_mintpy
-from hyp3_mintpy.util import nullable_string, upload_file_to_s3_with_publish_access_keys
+from importlib.metadata import entry_points
 
 
 def main() -> None:
     """HyP3 entrypoint for hyp3_mintpy."""
-    parser = ArgumentParser()
-    parser.add_argument('--bucket', help='AWS S3 bucket HyP3 for upload the final product(s)')
-    parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
-
-    # TODO: Your arguments here
-    parser.add_argument('--project-name', type=nullable_string, help='The name of the HyP3 project', required=False)
-    parser.add_argument('--start-date', type=nullable_string, help='Start date for the timeseries (YYYY-MM-DD)')
-    parser.add_argument('--end-date', type=nullable_string, help='End date for the timeseries (YYYY-MM-DD)')
+    parser = ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
-    )
-    parser.add_argument(
-        '--input-bucket',
-        type=nullable_string,
-        default=None,
-        help='Bucket to pull multiburst products',
-    )
-    parser.add_argument(
-        '--input-prefix',
-        type=nullable_string,
-        default=None,
-        help='Prefix to pull the products from the publish bucket',
-    )
-    parser.add_argument(
-        '--publish-bucket',
-        type=nullable_string,
-        default=None,
-        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
-        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
-    )
-    parser.add_argument(
-        '--publish-prefix',
-        type=nullable_string,
-        default=None,
-        help='Prefix for the bucket where the products will be published',
+        '++process',
+        choices=[
+            'mintpy_ts',
+            'opera_ts',
+        ],
+        default='mintpy_ts',
+        help='Select the HyP3 entrypoint to use',  # HyP3 entrypoints are specified in `pyproject.toml`
     )
 
-    args = parser.parse_args()
+    args, unknowns = parser.parse_known_args()
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    username = os.getenv('EARTHDATA_USERNAME')
-    password = os.getenv('EARTHDATA_PASSWORD')
-    if username and password:
-        write_credentials_to_netrc_file(username, password, append=False)
+    process_entry_point = list(entry_points(group='hyp3', name=args.process))[0]
 
-    if not (Path.home() / '.netrc').exists():
-        warnings.warn(
-            'Earthdata credentials must be present as environment variables, or in your netrc.',
-            UserWarning,
-        )
-
-    product_file = process_mintpy(
-        project_name=args.project_name,
-        input_bucket=args.input_bucket,
-        input_prefix=args.input_prefix,
-        min_coherence=args.min_coherence,
-        start=args.start_date,
-        end=args.end_date,
-    )
-
-    if args.bucket:
-        upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
-
-    if args.publish_bucket:
-        if args.publish_prefix:
-            prefix = args.publish_prefix
-            s3_name = str(product_file)
-        else:
-            if args.start_date is None or args.end_date is None:
-                prefix = 'multiburst_ts/'
-                s3_name = str(product_file)
-            else:
-                prefix = f'multiburst_ts/{str(product_file).split(".zip")[0]}'
-                s3_name = f'{args.start_date.replace("-", "")}_{args.end_date.replace("-", "")}.zip'
-        upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix, s3_name)
+    sys.argv = [args.process, *unknowns]
+    sys.exit(process_entry_point.load()())
 
 
 if __name__ == '__main__':

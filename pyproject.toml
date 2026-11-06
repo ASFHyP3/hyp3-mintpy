@@ -42,6 +42,14 @@ develop = [
 Homepage = "https://github.com/ASFHyP3/hyp3-mintpy"
 Documentation = "https://hyp3-docs.asf.alaska.edu"
 
+[project.scripts]
+mintpy_ts = "hyp3_mintpy.mintpy_ts:main"
+opera_ts = "hyp3_mintpy.opera_ts:main"
+
+[project.entry-points.hyp3]
+mintpy_ts = "hyp3_mintpy.mintpy_ts:main"
+opera_ts = "hyp3_mintpy.opera_ts:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 script_launch_mode = "subprocess"

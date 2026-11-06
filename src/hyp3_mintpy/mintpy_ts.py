@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import warnings
+from argparse import ArgumentParser
 from collections import Counter
 from datetime import timezone
 from pathlib import Path
@@ -16,11 +17,14 @@ import geopandas as gpd
 import hyp3_sdk as sdk
 import opensarlab_lib as osl
 import shapely.wkt
+from hyp3lib.aws import upload_file_to_s3
+from hyp3lib.fetch import write_credentials_to_netrc_file
 from osgeo import gdal
 from tqdm.auto import tqdm
 
 import hyp3_mintpy
 from hyp3_mintpy import gps, util
+from hyp3_mintpy.util import nullable_string, upload_file_to_s3_with_publish_access_keys
 
 
 log = logging.getLogger(__name__)
@@ -407,3 +411,85 @@ def process_mintpy(
 
     product_file = run_mintpy(output_name)
     return product_file
+
+
+def main() -> None:
+    """HyP3 entrypoint for hyp3_mintpy."""
+    parser = ArgumentParser()
+    parser.add_argument('--bucket', help='AWS S3 bucket HyP3 for upload the final product(s)')
+    parser.add_argument('--bucket-prefix', default='', help='Add a bucket prefix to product(s)')
+
+    # TODO: Your arguments here
+    parser.add_argument('--project-name', type=nullable_string, help='The name of the HyP3 project', required=False)
+    parser.add_argument('--start-date', type=nullable_string, help='Start date for the timeseries (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=nullable_string, help='End date for the timeseries (YYYY-MM-DD)')
+    parser.add_argument(
+        '--min-coherence', default=0.01, type=float, help='The minimum coherence to process', required=False
+    )
+    parser.add_argument(
+        '--input-bucket',
+        type=nullable_string,
+        default=None,
+        help='Bucket to pull multiburst products',
+    )
+    parser.add_argument(
+        '--input-prefix',
+        type=nullable_string,
+        default=None,
+        help='Prefix to pull the products from the publish bucket',
+    )
+    parser.add_argument(
+        '--publish-bucket',
+        type=nullable_string,
+        default=None,
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+    parser.add_argument(
+        '--publish-prefix',
+        type=nullable_string,
+        default=None,
+        help='Prefix for the bucket where the products will be published',
+    )
+
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
+    )
+
+    username = os.getenv('EARTHDATA_USERNAME')
+    password = os.getenv('EARTHDATA_PASSWORD')
+    if username and password:
+        write_credentials_to_netrc_file(username, password, append=False)
+
+    if not (Path.home() / '.netrc').exists():
+        warnings.warn(
+            'Earthdata credentials must be present as environment variables, or in your netrc.',
+            UserWarning,
+        )
+
+    product_file = process_mintpy(
+        project_name=args.project_name,
+        input_bucket=args.input_bucket,
+        input_prefix=args.input_prefix,
+        min_coherence=args.min_coherence,
+        start=args.start_date,
+        end=args.end_date,
+    )
+
+    if args.bucket:
+        upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
+
+    if args.publish_bucket:
+        if args.publish_prefix:
+            prefix = args.publish_prefix
+            s3_name = str(product_file)
+        else:
+            if args.start_date is None or args.end_date is None:
+                prefix = 'multiburst_ts/'
+                s3_name = str(product_file)
+            else:
+                prefix = f'multiburst_ts/{str(product_file).split(".zip")[0]}'
+                s3_name = f'{args.start_date.replace("-", "")}_{args.end_date.replace("-", "")}.zip'
+        upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix, s3_name)
