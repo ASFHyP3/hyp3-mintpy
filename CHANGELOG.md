@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - The `mintpy.process` workflows was renamed `mintpy.mintpy_ts` to distinguish it from the OPERA displacement time series.
+- The `__main__.py` entrypoint now allows you to select either the `mintpy_ts` (default) or `opera_ts` workflows using the `++process` option.
 
 ## [1.3.0]
 
