@@ -26,7 +26,7 @@ def main() -> None:
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    process_entry_point = list(entry_points(group='hyp3', name=args.process))[0]
+    process_entry_point = list(entry_points(group='hyp3', name=args.process))[0]  # noqa: RUF015
 
     sys.argv = [args.process, *unknowns]
     sys.exit(process_entry_point.load()())

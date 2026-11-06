@@ -38,7 +38,7 @@ def open_remote_disp(fs: AbstractFileSystem, url: str, y_slice: slice, x_slice: 
     return ds
 
 
-def download_los(aoi: list[float], name: str) -> Path:
+def download_los(aoi: list[float], name: str) -> tuple[list[str], list[float]]:
     """Downloads and crop OPERA displacement line of sight.
 
     Args:
@@ -65,14 +65,14 @@ def download_los(aoi: list[float], name: str) -> Path:
     tifs = list(tif_dir.glob('*.tif'))
     for tif in tifs:
         ds = rxr.open_rasterio(tif)
-        ds_crs = ds.rio.crs
+        ds_crs = ds.rio.crs  # type: ignore
 
         transformer = Transformer.from_crs('EPSG:4326', ds_crs, always_xy=True)
 
         min_x, min_y = transformer.transform(aoi[0], aoi[1])
         max_x, max_y = transformer.transform(aoi[2], aoi[3])
 
-        ds_clip = ds.rio.clip_box(minx=min_x, miny=min_y, maxx=max_x, maxy=max_y)
+        ds_clip = ds.rio.clip_box(minx=min_x, miny=min_y, maxx=max_x, maxy=max_y)  # type: ignore
 
         ds_clip.rio.to_raster(str(tif).replace('.tif', '_clip.tif'))
         tif.unlink()
