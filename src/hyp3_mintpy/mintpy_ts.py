@@ -8,7 +8,6 @@ import subprocess
 import warnings
 from argparse import ArgumentParser
 from collections import Counter
-from datetime import timezone
 from pathlib import Path
 
 import boto3
@@ -176,16 +175,16 @@ def check_product(filename: str, start: str | None = None, end: str | None = Non
         start: Start date for the timeseries if one of the product dates is before this, it won't be downloaded.
         end: End date for the timeseries if one of the product dates is after this, it won't be downloaded.
     """
-    date1 = dt.datetime.strptime(filename.split('_')[4], '%Y%m%d').replace(tzinfo=timezone.utc)
-    date2 = dt.datetime.strptime(filename.split('_')[5], '%Y%m%d').replace(tzinfo=timezone.utc)
+    date1 = dt.datetime.strptime(filename.split('_')[4], '%Y%m%d').replace(tzinfo=dt.UTC)
+    date2 = dt.datetime.strptime(filename.split('_')[5], '%Y%m%d').replace(tzinfo=dt.UTC)
     cond1 = True
     cond2 = True
     if start is not None:
-        start_date = dt.datetime.strptime(start, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        start_date = dt.datetime.strptime(start, '%Y-%m-%d').replace(tzinfo=dt.UTC)
         cond1 = date1 >= start_date and date2 >= start_date
 
     if end is not None:
-        end_date = dt.datetime.strptime(end, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        end_date = dt.datetime.strptime(end, '%Y-%m-%d').replace(tzinfo=dt.UTC)
         cond2 = date1 <= end_date and date2 <= end_date
 
     return cond1 and cond2
