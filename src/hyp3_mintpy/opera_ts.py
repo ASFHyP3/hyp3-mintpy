@@ -114,7 +114,7 @@ def download_ts(aoi: list[float], name: str) -> Path:
         furls = sorted({u for u in urls if frame in u})
         print('Frame', frame)
         if len(furls) > 0:
-            da_list = [open_remote_disp(fs, u, y_slice, x_slice) for u in furls[0:2]]
+            da_list = [open_remote_disp(fs, u, y_slice, x_slice) for u in furls]
             ds = xr.concat(da_list, dim='time')
             if ds.sizes['time'] > 0 and ds.sizes['x'] > 0 and ds.sizes['y'] > 0:
                 ds = ds.compute()
