@@ -12,7 +12,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a workflow `opera_ts` to pull OPERA displacement time series.
 
 ### Changed
-- The MintPy workflow was named `mintpy_ts` to pull OPERA displacement time series.
+- The `mintpy.process` workflows was renamed `mintpy.mintpy_ts` to distinguish it from the OPERA displacement time series.
 
 ## [1.3.0]
 
