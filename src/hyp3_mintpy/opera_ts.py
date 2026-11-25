@@ -166,8 +166,6 @@ def download_ts(
     """
     frames, bbox = download_los(aoi, name, frame=None)
     min_x, max_x, min_y, max_y = bbox
-    print(aoi)
-    print(start_time, end_time)
     if frame is None:
         results = earthaccess.search_data(short_name='OPERA_L3_DISP-S1_V1', bounding_box=tuple(aoi))
     else:
@@ -188,8 +186,6 @@ def download_ts(
 
     y_slice = slice(max_y, min_y)
     x_slice = slice(min_x, max_x)
-    print(min_x, max_x, min_y, max_y)
-    print(urls)
 
     for framet in frames:
         if start_time is not None and end_time is not None:
@@ -204,7 +200,6 @@ def download_ts(
             )
         else:
             furls = sorted({u for u in urls if framet in u})
-        print(furls)
         pass_dir = get_pass_dir(fs, furls[0])
 
         references = sorted({furl.split('/')[-1].split('_')[6] for furl in furls})
@@ -301,7 +296,6 @@ def main() -> None:
         )
 
     args.aoi = [float(item) for sublist in args.aoi for item in sublist]
-    print(args.aoi)
 
     product_file = download_ts(args.aoi, args.name, args.start_time, args.end_time, args.frame)
 
