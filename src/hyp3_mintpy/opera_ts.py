@@ -72,9 +72,9 @@ def get_perp_baseline(fs: AbstractFileSystem, url: str, y_slice: slice, x_slice:
         Perpendicular baseline
     """
     file_object = fs.open(url)
-    bperp = xr.open_dataset(file_object, group='/corrections', engine='h5netcdf')[
-        ['perpendicular_baseline']
-    ].sel(y=y_slice, x=x_slice)
+    bperp = xr.open_dataset(file_object, group='/corrections', engine='h5netcdf')[['perpendicular_baseline']].sel(
+        y=y_slice, x=x_slice
+    )
 
     return bperp
 
@@ -93,7 +93,9 @@ def download_los(aoi: list[float], name: str, frame: str | None = None) -> tuple
     if frame is None:
         results_static = earthaccess.search_data(short_name='OPERA_L3_DISP-S1-STATIC_V1', bounding_box=tuple(aoi))
     else:
-        results_static = earthaccess.search_data(short_name='OPERA_L3_DISP-S1-STATIC_V1', bounding_box=tuple(aoi), granule_name=f'*{frame}*')
+        results_static = earthaccess.search_data(
+            short_name='OPERA_L3_DISP-S1-STATIC_V1', bounding_box=tuple(aoi), granule_name=f'*{frame}*'
+        )
     _ = earthaccess.login()
     urls = []
     for result in results_static:
@@ -138,10 +140,18 @@ def get_dates(sdate: str) -> tuple[datetime, datetime]:
     Returns:
         Start and end dates.
     """
-    return datetime.strptime(sdate.split('/')[-1].split('_')[6],'%Y%m%dT%H%M%SZ'), datetime.strptime(sdate.split('/')[-1].split('_')[7],'%Y%m%dT%H%M%SZ')
+    return datetime.strptime(sdate.split('/')[-1].split('_')[6], '%Y%m%dT%H%M%SZ'), datetime.strptime(
+        sdate.split('/')[-1].split('_')[7], '%Y%m%dT%H%M%SZ'
+    )
 
 
-def download_ts(aoi: list[float], name: str, start_time: datetime | None = None, end_time: datetime | None = None, frame: str | None = None) -> Path:
+def download_ts(
+    aoi: list[float],
+    name: str,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    frame: str | None = None,
+) -> Path:
     """Downloads OPERA displacement time series for an AOI.
 
     Args:
@@ -154,7 +164,7 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
     Returns:
         Path for the output zip file.
     """
-    frames, bbox = download_los(aoi, name, frame = None)
+    frames, bbox = download_los(aoi, name, frame=None)
     min_x, max_x, min_y, max_y = bbox
     print(aoi)
     print(start_time, end_time)
@@ -162,7 +172,9 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
         results = earthaccess.search_data(short_name='OPERA_L3_DISP-S1_V1', bounding_box=tuple(aoi))
     else:
         frames = [f'F{frame}']
-        results = earthaccess.search_data(short_name='OPERA_L3_DISP-S1_V1', bounding_box=tuple(aoi), granule_name=f'*{frame}*')
+        results = earthaccess.search_data(
+            short_name='OPERA_L3_DISP-S1_V1', bounding_box=tuple(aoi), granule_name=f'*{frame}*'
+        )
 
     urls = []
     for result in results:
@@ -181,7 +193,15 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
 
     for framet in frames:
         if start_time is not None and end_time is not None:
-            furls = sorted({u for u in urls if framet in u and get_dates(u)[1]<datetime.strptime(end_time,'%Y-%m-%d') and get_dates(u)[0]>datetime.strptime(start_time,'%Y-%m-%d')})
+            furls = sorted(
+                {
+                    u
+                    for u in urls
+                    if framet in u
+                    and get_dates(u)[1] < datetime.strptime(end_time, '%Y-%m-%d')
+                    and get_dates(u)[0] > datetime.strptime(start_time, '%Y-%m-%d')
+                }
+            )
         else:
             furls = sorted({u for u in urls if framet in u})
         print(furls)
@@ -195,7 +215,7 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
         next_frame = False
         for i, reference in enumerate(references):
             print('Frame', framet, reference)
-            furls_ref = sorted({u for u in furls if reference==u.split('/')[-1].split('_')[6]})
+            furls_ref = sorted({u for u in furls if reference == u.split('/')[-1].split('_')[6]})
 
             da_list = [open_remote_disp(fs, u, y_slice, x_slice) for u in furls_ref]
             bp_list = [get_perp_baseline(fs, u, y_slice, x_slice) for u in furls_ref]
@@ -205,7 +225,7 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
             if ds_ref.sizes['time'] == 0 or ds_ref.sizes['x'] == 0 or ds_ref.sizes['y'] == 0:
                 next_frame = True
                 break
-            if i==0:
+            if i == 0:
                 shape = ds_ref['displacement'].shape
                 cum_offset_disp = np.zeros((shape[1], shape[2]))
                 cum_offset_short = np.zeros((shape[1], shape[2]))
@@ -216,14 +236,14 @@ def download_ts(aoi: list[float], name: str, start_time: datetime | None = None,
                 ds_ref['displacement'] += cum_offset_disp
                 ds_ref['short_wavelength_displacement'] += cum_offset_short
                 ds_ref['perpendicular_baseline'] += cum_bp
-            cum_offset_disp += ds_ref['displacement'].values[-1,:,:]
-            cum_offset_short += ds_ref['short_wavelength_displacement'].values[-1,:,:]
-            cum_bp += bp_ref['perpendicular_baseline'].values[-1,:,:]
+            cum_offset_disp += ds_ref['displacement'].values[-1, :, :]
+            cum_offset_short += ds_ref['short_wavelength_displacement'].values[-1, :, :]
+            cum_bp += bp_ref['perpendicular_baseline'].values[-1, :, :]
             ds_frame_list.append(ds_ref)
         if next_frame:
             continue
         ds_frame = xr.concat(ds_frame_list, dim='time')
-        ds_frame.attrs['orbit_pass_direction'] = pass_dir['orbit_pass_direction'].item().decode("utf-8")
+        ds_frame.attrs['orbit_pass_direction'] = pass_dir['orbit_pass_direction'].item().decode('utf-8')
         ds_frame.attrs['track_number'] = pass_dir['track_number'].item()
         ds_frame.attrs['dates'] = dates
         ds_frame.to_netcdf(f'OPERA_{name}/OPERA_{framet}.h5', engine='h5netcdf')
