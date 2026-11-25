@@ -41,7 +41,7 @@ def open_remote_disp(fs: AbstractFileSystem, url: str, y_slice: slice, x_slice: 
     return ds
 
 
-def get_pass_dir(fs: AbstractFileSystem, url: str) -> str:
+def get_pass_dir(fs: AbstractFileSystem, url: str) -> xr.Dataset:
     """Stream displacement OPERA product.
 
     Args:
@@ -121,7 +121,7 @@ def download_los(aoi: list[float], name: str, frame: str | None = None) -> tuple
 
         y_slice = slice(max_y, min_y)
         x_slice = slice(min_x, max_x)
-        ds_clip = ds.sel(y=y_slice, x=x_slice)
+        ds_clip = ds.sel(y=y_slice, x=x_slice)  # type: ignore
 
         ds_clip.rio.to_raster(str(tif).replace('.tif', '_clip.tif'))
         tif.unlink()
@@ -148,8 +148,8 @@ def get_dates(sdate: str) -> tuple[datetime, datetime]:
 def download_ts(
     aoi: list[float],
     name: str,
-    start_time: datetime | None = None,
-    end_time: datetime | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
     frame: str | None = None,
 ) -> Path:
     """Downloads OPERA displacement time series for an AOI.

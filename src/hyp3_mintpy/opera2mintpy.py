@@ -130,7 +130,7 @@ def create_static_layers(
         'shadowMask': (np.int8, (ny, nx), shadow_mask),
     }
 
-    _write_hdf5(f'geometryGeo_{frame}_path{path}.h5', geometry_dsets, geometry_meta)
+    _write_hdf5(Path(f'geometryGeo_{frame}_path{path}.h5'), geometry_dsets, geometry_meta)
     print('Created geometryGeo.h5.')
 
 
@@ -198,7 +198,7 @@ def disp_to_mintpy(
         'bperp': (np.float32, bperp.shape, bperp),
         'timeseries': (np.float32, disp.shape, disp),
     }
-    _write_hdf5(f'timeseries_{frame}_path{spath}.h5', ts_dsets, ts_meta)
+    _write_hdf5(Path(f'timeseries_{frame}_path{spath}.h5'), ts_dsets, ts_meta)
     print('Done with timeseries.h5 (copied data)')
 
     # 3. avgSpatialCoh.h5  (use average_temporal_coherence layer)
@@ -207,7 +207,7 @@ def disp_to_mintpy(
     # TODO: fix these to work in blocks!
     coh_meta = ts_meta | {'FILE_TYPE': 'mask', 'UNIT': '1'}
     coh_dsets = {'avgSpatialCoh': (np.float32, (ny, nx), avg_coh)}
-    _write_hdf5(f'avgSpatialCoh_{frame}_path{spath}.h5', coh_dsets, coh_meta)
+    _write_hdf5(Path(f'avgSpatialCoh_{frame}_path{spath}.h5'), coh_dsets, coh_meta)
     print('Done with avgSpatialCoh.h5')
 
     # geometryGeo.h5
